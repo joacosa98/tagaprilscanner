@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AprilTag Map Builder</title>
+    <style>
+        :root {
+            --ink: #0f172a;
+            --slate: #334155;
+            --muted: #64748b;
+            --bg: #f8fafc;
+            --accent: #0ea5e9;
+            --accent-2: #22c55e;
+            --accent-3: #f97316;
+            --danger: #ef4444;
+            --card: #ffffff;
+            --shadow: 0 20px 50px rgba(2, 6, 23, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Avenir Next", "Avenir", "Futura", "Trebuchet MS", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(900px 300px at 10% -10%, rgba(14, 165, 233, 0.22), transparent 60%),
+                radial-gradient(900px 300px at 90% -10%, rgba(34, 197, 94, 0.18), transparent 60%),
+                linear-gradient(180deg, #f1f5f9 0%, #ffffff 60%, #f8fafc 100%);
+            min-height: 100vh;
+            padding: 28px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .hero {
+            display: grid;
+            gap: 10px;
+        }
+
+        .hero h1 {
+            font-size: 30px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero p {
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .status.disconnected {
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        .status.connected {
+            color: #166534;
+            background: #dcfce7;
+        }
+
+        .status.connecting {
+            color: #9a3412;
+            background: #ffedd5;
+            animation: pulse 1.5s infinite;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--accent-2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--slate);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .note {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .mapping-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .mapping-card {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 14px;
+            padding: 12px;
+            display: grid;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        .mapping-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .field {
+            display: grid;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .field input {
+            padding: 10px 12px;
+            border: 1px solid #cbd5f5;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .mono {
+            font-family: "Courier New", monospace;
+            font-size: 12px;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out, slideOut 0.3s ease-in 2.7s;
+            pointer-events: none;
+        }
+
+        .toast-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #22c55e;
+        }
+
+        .toast-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+
+        .toast-info {
+            background: #e0f2fe;
+            color: #075985;
+            border: 1px solid #0ea5e9;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #075985;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .error-box {
+            border: 1px solid #fecaca;
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .error-box.show {
+            display: block;
+        }
+
+        .mapping-card.error {
+            border-color: #fecaca;
+            box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12);
+        }
+
+        .popover {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 1000;
+        }
+
+        .popover.open {
+            display: flex;
+        }
+
+        .popover-card {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            width: min(960px, 96vw);
+            display: grid;
+            gap: 12px;
+        }
+
+        .popover-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .reader-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #0b1120;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .reader-frame iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+
+        .progress {
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-2);
+            transition: width 0.12s linear;
+        }
+
+        .uuid-grid {
+            display: grid;
+            grid-template-columns: 170px 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .uuid-grid input {
+            padding: 8px 10px;
+            border: 1px solid #cbd5f5;
+            border-radius: 8px;
+            font-family: "Courier New", monospace;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @media (max-width: 900px) {
+            .mapping-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card hero">
+            <h1>AprilTag Map Builder</h1>
+            <p>Creá el mapeo físico → lógico. Los IDs lógicos de control (1–4) no son editables.</p>
+            <div class="status disconnected" id="status">● Desconectado</div>
+        </div>
+
+        <div class="card">
+            <div class="toolbar">
+                <button class="btn-primary" id="connectBtn">Conectar ESP32</button>
+                <button class="btn-success" id="sendMapBtn" disabled>Enviar Mapa</button>
+                <button class="btn-secondary" id="loadMapBtn" disabled>Cargar desde ESP32</button>
+                <button class="btn-secondary" id="addMappingBtn">Agregar mapeo</button>
+                <button class="btn-secondary" id="clearMappingsBtn">Limpiar</button>
+            </div>
+            <p class="note" style="margin-top: 10px;">Tip: podés leer un tag físico con el lector y luego asignarle el ID lógico.</p>
+        </div>
+
+        <div class="card">
+            <div class="error-box" id="errorBox"></div>
+            <div class="mapping-list" id="mappingList"></div>
+            <div style="margin-top: 14px;">
+                <h3 style="font-size: 14px; margin-bottom: 6px;">Payload BLE</h3>
+                <pre id="mapPayload" class="mono" style="background:#f1f5f9; padding:10px; border-radius:8px;">[]</pre>
+            </div>
+        </div>
+
+        <details class="card">
+            <summary style="font-weight:700; cursor:pointer;">Configuración BLE (avanzado)</summary>
+            <div style="margin-top: 12px; display:grid; gap:10px;">
+                <div class="uuid-grid"><label>Service UUID</label><input type="text" id="serviceUuid" value="0000abf0-0000-1000-8000-00805f9b34fb"></div>
+                <div class="uuid-grid"><label>Mapper CFG Write</label><input type="text" id="writeCharUuid" value="0000abf6-0000-1000-8000-00805f9b34fb"></div>
+                <div class="uuid-grid"><label>Mapper CFG Read</label><input type="text" id="readCharUuid" value="0000abf7-0000-1000-8000-00805f9b34fb"></div>
+            </div>
+        </details>
+    </div>
+
+    <div class="popover" id="tagReaderPopover" aria-hidden="true">
+        <div class="popover-card">
+            <div class="popover-header">
+                <div>
+                    <h3 id="tagReaderTitle" style="font-size: 18px;">Leer Tag</h3>
+                    <p class="note">Mostrá el tag frente a la cámara. Cuando sea estable por 5 segundos, se asigna automáticamente.</p>
+                </div>
+                <button class="btn-secondary" id="closeTagReaderBtn">Cerrar</button>
+            </div>
+            <div class="reader-frame">
+                <iframe id="tagReaderFrame" title="Lector de AprilTag"></iframe>
+            </div>
+            <div>
+                <div class="progress">
+                    <div class="progress-bar" id="tagReaderProgressBar"></div>
+                </div>
+                <div class="note" id="tagReaderProgressText" style="margin-top: 6px;">Esperando detecciones...</div>
+                <div class="note" id="tagReaderStatus" style="margin-top: 4px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const RESERVED_LOGICAL = new Set([1, 2, 3, 4]);
+
+        let bleDevice = null;
+        let bleServer = null;
+        let writeCharacteristic = null;
+        let readCharacteristic = null;
+
+        let mappings = [];
+        let activeReadIndex = null;
+        let tagReaderOpen = false;
+        let stableTagId = null;
+        let stableStart = null;
+        let lastDetectionAt = null;
+        let tagReaderTimer = null;
+        let tagReaderLocked = false;
+        let renderDebounceTimer = null;
+        let animationFrameId = null;
+        let tagReaderStaleShown = false;
+        let tagReaderLastProgress = null;
+
+        const statusEl = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const sendMapBtn = document.getElementById('sendMapBtn');
+        const loadMapBtn = document.getElementById('loadMapBtn');
+        const addMappingBtn = document.getElementById('addMappingBtn');
+        const clearMappingsBtn = document.getElementById('clearMappingsBtn');
+        const mappingListEl = document.getElementById('mappingList');
+        const mapPayloadEl = document.getElementById('mapPayload');
+        const errorBoxEl = document.getElementById('errorBox');
+
+        const tagReaderPopover = document.getElementById('tagReaderPopover');
+        const tagReaderFrame = document.getElementById('tagReaderFrame');
+        const closeTagReaderBtn = document.getElementById('closeTagReaderBtn');
+        const tagReaderTitle = document.getElementById('tagReaderTitle');
+        const tagReaderProgressBar = document.getElementById('tagReaderProgressBar');
+        const tagReaderProgressText = document.getElementById('tagReaderProgressText');
+        const tagReaderStatus = document.getElementById('tagReaderStatus');
+
+        const serviceUuidInput = document.getElementById('serviceUuid');
+        const writeCharUuidInput = document.getElementById('writeCharUuid');
+        const readCharUuidInput = document.getElementById('readCharUuid');
+
+        function updateStatus(state, text) {
+            statusEl.className = `status ${state}`;
+            statusEl.textContent = text;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function formatBuffer(buffer) {
+            let out = `[${buffer.length} bytes]\n`;
+            out += `count: ${buffer[0]}\n`;
+            out += 'data: ';
+            out += Array.from(buffer).map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+            return out;
+        }
+
+        function validateMappings() {
+            const errors = [];
+            const rowErrors = new Set();
+            const seenPhysical = new Map();
+            const seenLogical = new Map();
+
+            mappings.forEach((entry, idx) => {
+                const physical = entry.physical;
+                const logical = entry.logical;
+
+                if (!Number.isFinite(physical) || !Number.isFinite(logical)) {
+                    rowErrors.add(idx);
+                    errors.push(`Fila ${idx + 1}: faltan valores físicos o lógicos.`);
+                    return;
+                }
+
+                if (physical < 0 || physical > 255 || logical < 0 || logical > 255) {
+                    rowErrors.add(idx);
+                    errors.push(`Fila ${idx + 1}: IDs fuera de rango (0–255).`);
+                }
+
+                if (RESERVED_LOGICAL.has(logical)) {
+                    rowErrors.add(idx);
+                    errors.push(`Fila ${idx + 1}: ID lógico ${logical} reservado para control.`);
+                }
+
+                if (seenPhysical.has(physical)) {
+                    rowErrors.add(idx);
+                    rowErrors.add(seenPhysical.get(physical));
+                    errors.push(`ID físico repetido: ${physical}.`);
+                } else {
+                    seenPhysical.set(physical, idx);
+                }
+
+                if (seenLogical.has(logical)) {
+                    rowErrors.add(idx);
+                    rowErrors.add(seenLogical.get(logical));
+                    errors.push(`ID lógico repetido: ${logical}.`);
+                } else {
+                    seenLogical.set(logical, idx);
+                }
+            });
+
+            if (mappings.length === 0) {
+                errors.push('Agregá al menos un mapeo antes de enviar.');
+            }
+
+            return { errors, rowErrors };
+        }
+
+        function formatValidationErrors(errors) {
+            if (errors.length === 0) return '';
+            return errors.map(err => 
+                `<div style="padding: 6px 10px; margin: 2px 0; background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 4px; font-size: 12px;">${err}</div>`
+            ).join('');
+        }
+
+        function updatePayload() {
+            const { errors } = validateMappings();
+            if (errors.length > 0) {
+                mapPayloadEl.textContent = '[]';
+                return;
+            }
+            const clean = mappings.slice().sort((a, b) => a.physical - b.physical);
+            const buffer = new Uint8Array(1 + clean.length * 2);
+            buffer[0] = clean.length;
+            let offset = 1;
+            clean.forEach(p => {
+                buffer[offset++] = p.physical;
+                buffer[offset++] = p.logical;
+            });
+            mapPayloadEl.textContent = formatBuffer(buffer);
+        }
+
+        function debouncedRenderMappings() {
+            if (renderDebounceTimer) {
+                clearTimeout(renderDebounceTimer);
+            }
+            renderDebounceTimer = setTimeout(() => {
+                renderMappings();
+                renderDebounceTimer = null;
+            }, 150);
+        }
+
+        function renderMappings() {
+            mappingListEl.innerHTML = '';
+
+            if (mappings.length === 0) {
+                mappingListEl.innerHTML = '<p class="note">Agregá un mapeo para comenzar.</p>';
+                errorBoxEl.classList.remove('show');
+                errorBoxEl.textContent = '';
+                updatePayload();
+                return;
+            }
+
+            const validation = validateMappings();
+            if (validation.errors.length > 0) {
+                const unique = Array.from(new Set(validation.errors));
+                errorBoxEl.innerHTML = formatValidationErrors(unique);
+                errorBoxEl.classList.add('show');
+            } else {
+                errorBoxEl.classList.remove('show');
+                errorBoxEl.innerHTML = '';
+            }
+
+            mappings.forEach((entry, idx) => {
+                const card = document.createElement('div');
+                card.className = 'mapping-card';
+                if (validation.rowErrors.has(idx)) {
+                    card.classList.add('error');
+                }
+
+                const row = document.createElement('div');
+                row.className = 'mapping-row';
+
+                const physicalField = document.createElement('div');
+                physicalField.className = 'field';
+                physicalField.innerHTML = '<label>Tag físico</label>';
+                const physicalInput = document.createElement('input');
+                physicalInput.type = 'number';
+                physicalInput.min = '0';
+                physicalInput.max = '255';
+                physicalInput.placeholder = 'Ingresá o leé un tag';
+                physicalInput.value = entry.physical ?? '';
+                physicalInput.addEventListener('input', (e) => {
+                    const raw = e.target.value.trim();
+                    if (raw === '') {
+                        entry.physical = null;
+                    } else {
+                        const parsed = Number(raw);
+                        if (Number.isFinite(parsed)) {
+                            entry.physical = Math.max(0, Math.min(255, Math.floor(parsed)));
+                        } else {
+                            entry.physical = null;
+                        }
+                    }
+                    debouncedRenderMappings();
+                });
+                physicalField.appendChild(physicalInput);
+
+                const logicalField = document.createElement('div');
+                logicalField.className = 'field';
+                logicalField.innerHTML = '<label>ID lógico (mapeado)</label>';
+                const logicalInput = document.createElement('input');
+                logicalInput.type = 'number';
+                logicalInput.min = '0';
+                logicalInput.max = '255';
+                logicalInput.placeholder = 'Asigná ID lógico';
+                logicalInput.value = entry.logical ?? '';
+                logicalInput.addEventListener('input', (e) => {
+                    const raw = e.target.value.trim();
+                    if (raw === '') {
+                        entry.logical = null;
+                    } else {
+                        const parsed = Number(raw);
+                        if (Number.isFinite(parsed)) {
+                            const bounded = Math.max(0, Math.min(255, Math.floor(parsed)));
+                            entry.logical = bounded;
+                        } else {
+                            entry.logical = null;
+                        }
+                    }
+                    debouncedRenderMappings();
+                });
+                logicalField.appendChild(logicalInput);
+
+                const actions = document.createElement('div');
+                actions.style.display = 'flex';
+                actions.style.gap = '8px';
+                actions.style.flexWrap = 'wrap';
+
+                const readBtn = document.createElement('button');
+                readBtn.className = 'btn-primary';
+                readBtn.textContent = 'Leer tag';
+                readBtn.onclick = () => openTagReader(idx);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-danger';
+                removeBtn.textContent = 'Eliminar';
+                removeBtn.onclick = () => {
+                    mappings.splice(idx, 1);
+                    renderMappings();
+                };
+
+                actions.appendChild(readBtn);
+                actions.appendChild(removeBtn);
+
+                row.appendChild(physicalField);
+                row.appendChild(logicalField);
+                row.appendChild(actions);
+
+                const hint = document.createElement('div');
+                hint.className = 'chip';
+                hint.textContent = 'Mapa físico → lógico';
+
+                card.appendChild(row);
+                card.appendChild(hint);
+                mappingListEl.appendChild(card);
+            });
+
+            updatePayload();
+        }
+
+        function isValidUUID(uuid) {
+            const pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return pattern.test(uuid);
+        }
+
+        function checkBrowserSupport() {
+            if (!navigator.bluetooth) {
+                alert('❌ Tu navegador no soporta Web Bluetooth API.\n\nUsa Chrome 89+ o Edge 89+');
+                return false;
+            }
+            return true;
+        }
+
+        function checkSecureContext() {
+            if (!window.isSecureContext) {
+                alert('❌ BLE requiere HTTPS o localhost.\n\nURL actual: ' + window.location.href + '\n\nUsa localhost o sirve con HTTPS.');
+                return false;
+            }
+            return true;
+        }
+
+        async function connectBLE() {
+            if (!checkBrowserSupport() || !checkSecureContext()) return;
+
+            try {
+                updateStatus('connecting', 'Conectando...');
+                const serviceUuid = serviceUuidInput.value.trim();
+                const writeCharUuid = writeCharUuidInput.value.trim();
+                const readCharUuid = readCharUuidInput.value.trim();
+
+                // Validate UUIDs
+                const uuids = [
+                    { name: 'Service', value: serviceUuid },
+                    { name: 'Write Char', value: writeCharUuid },
+                    { name: 'Read Char', value: readCharUuid }
+                ];
+                for (const uuid of uuids) {
+                    if (!isValidUUID(uuid.value)) {
+                        alert(`❌ UUID inválido: ${uuid.name}\n\n"${uuid.value}"\n\nDebe ser formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`);
+                        updateStatus('disconnected', 'Desconectado');
+                        return;
+                    }
+                }
+
+                // Set connection timeout
+                const timeout = setTimeout(() => {
+                    if (bleDevice && !bleDevice.gatt.connected) {
+                        updateStatus('disconnected', 'Timeout de conexión');
+                        alert('⏱️ Timeout: No se pudo conectar en 15 segundos.\n\nAsegurate que el ESP32 esté encendido y en rango.');
+                        if (bleDevice.gatt) bleDevice.gatt.disconnect();
+                    }
+                }, 15000);
+
+                // Probar con múltiples estrategias de búsqueda
+                console.log('Buscando dispositivos BLE...');
+                console.log('Service UUID configurado:', serviceUuid);
+                
+                // Intentar primero por nombre + service
+                try {
+                    bleDevice = await navigator.bluetooth.requestDevice({
+                        filters: [
+                            { name: 'ROBOTITO_SPP_SERVER' },
+                            { namePrefix: 'ROBOTITO' }
+                        ],
+                        optionalServices: [serviceUuid]
+                    });
+                    console.log('✓ Encontrado por nombre');
+                } catch (e1) {
+                    console.log('❌ No encontrado por nombre:', e1.message);
+                    console.log('Intentando por service UUID...');
+                    try {
+                        bleDevice = await navigator.bluetooth.requestDevice({
+                            filters: [{ services: [serviceUuid] }],
+                            optionalServices: [serviceUuid]
+                        });
+                        console.log('✓ Encontrado por service UUID');
+                    } catch (e2) {
+                        console.log('❌ No encontrado por service:', e2.message);
+                        console.log('Modo DEBUG: Mostrando todos los dispositivos...');
+                        // DEBUG: Mostrar todos los dispositivos para diagnosticar
+                        bleDevice = await navigator.bluetooth.requestDevice({
+                            acceptAllDevices: true,
+                            optionalServices: [serviceUuid]
+                        });
+                        console.log('⚠️ Dispositivo seleccionado manualmente (modo debug)');
+                    }
+                }
+
+                console.log('Dispositivo seleccionado:', bleDevice.name);
+                console.log('ID:', bleDevice.id);
+                
+                clearTimeout(timeout);
+
+                bleServer = await bleDevice.gatt.connect();
+                console.log('✓ Conectado al servidor GATT');
+                
+                const service = await bleServer.getPrimaryService(serviceUuid);
+                console.log('✓ Servicio encontrado');
+                
+                try {
+                    writeCharacteristic = await service.getCharacteristic(writeCharUuid);
+                    readCharacteristic = await service.getCharacteristic(readCharUuid);
+                    console.log('✓ Todas las características encontradas');
+                } catch (charError) {
+                    throw new Error('❌ No se encontraron las características del mapper.\n\nAsegurate de que el ESP32 tenga el firmware con soporte para AprilTag Mapper.\n\nDetalle: ' + charError.message);
+                }
+                bleDevice.addEventListener('gattserverdisconnected', onDeviceDisconnected);
+
+                updateStatus('connected', 'Conectado');
+                sendMapBtn.disabled = false;
+                loadMapBtn.disabled = false;
+                connectBtn.textContent = 'Desconectar';
+                await loadMapFromESP32();
+            } catch (error) {
+                alert('Error de conexión BLE: ' + error.message);
+                updateStatus('disconnected', 'Desconectado');
+            }
+        }
+
+        function onDeviceDisconnected() {
+            updateStatus('disconnected', 'Desconectado');
+            sendMapBtn.disabled = true;
+            loadMapBtn.disabled = true;
+            connectBtn.textContent = 'Conectar ESP32';
+        }
+
+        async function disconnectBLE() {
+            if (bleDevice && bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+            }
+            bleDevice = null;
+            bleServer = null;
+            writeCharacteristic = null;
+            readCharacteristic = null;
+            updateStatus('disconnected', 'Desconectado');
+        }
+
+        async function loadMapFromESP32() {
+            if (!readCharacteristic) {
+                alert('No hay conexión BLE activa');
+                return;
+            }
+            try {
+                const value = await readCharacteristic.readValue();
+                const buffer = new Uint8Array(value.buffer);
+                if (buffer.length < 1) {
+                    mappings = [];
+                    renderMappings();
+                    return;
+                }
+                const count = buffer[0];
+                const loaded = [];
+                for (let i = 0; i < count; i++) {
+                    const idx = 1 + i * 2;
+                    if (idx + 1 < buffer.length) {
+                        loaded.push({ physical: buffer[idx], logical: buffer[idx + 1] });
+                    }
+                }
+                mappings = loaded;
+                renderMappings();
+            } catch (error) {
+                alert('Error al cargar mapa: ' + error.message);
+            }
+        }
+
+        async function sendMapToESP32() {
+            if (!writeCharacteristic) {
+                alert('No hay conexión BLE activa');
+                return;
+            }
+
+            const validation = validateMappings();
+            if (validation.errors.length > 0) {
+                renderMappings();
+                alert('Corregí los errores antes de enviar.');
+                return;
+            }
+
+            const clean = mappings.slice().sort((a, b) => a.physical - b.physical);
+            const buffer = new Uint8Array(1 + clean.length * 2);
+            buffer[0] = clean.length;
+            let offset = 1;
+            clean.forEach(p => {
+                buffer[offset++] = p.physical;
+                buffer[offset++] = p.logical;
+            });
+
+            try {
+                await writeCharacteristic.writeValue(buffer);
+                showToast('Mapa enviado y guardado correctamente', 'success');
+            } catch (error) {
+                showToast('Error al enviar: ' + error.message, 'error');
+            }
+        }
+
+        function resetTagReaderState(message = 'Esperando detecciones...') {
+            stableTagId = null;
+            stableStart = null;
+            lastDetectionAt = null;
+            tagReaderProgressBar.style.width = '0%';
+            tagReaderProgressText.textContent = message;
+            tagReaderStatus.textContent = '';
+        }
+
+        function openTagReader(index) {
+            activeReadIndex = index;
+            tagReaderOpen = true;
+            tagReaderLocked = false;
+            tagReaderStaleShown = false;
+            tagReaderLastProgress = null;
+            resetTagReaderState();
+            tagReaderTitle.textContent = 'Leer Tag Físico';
+            tagReaderPopover.classList.add('open');
+            tagReaderPopover.setAttribute('aria-hidden', 'false');
+            if (!tagReaderFrame.src) {
+                tagReaderFrame.src = 'index.html?embedded=1';
+            }
+
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            
+            function updateProgressAnimation() {
+                if (!tagReaderOpen || tagReaderLocked) {
+                    animationFrameId = null;
+                    return;
+                }
+                
+                const now = Date.now();
+                if (lastDetectionAt && now - lastDetectionAt > 1200) {
+                    if (!tagReaderStaleShown) {
+                        resetTagReaderState('Buscando tag...');
+                        tagReaderStaleShown = true;
+                        tagReaderLastProgress = null;
+                    }
+                } else if (stableStart) {
+                    const progress = Math.min((now - stableStart) / 5000, 1);
+                    const progressPercent = Math.round(progress * 100);
+                    if (progressPercent !== tagReaderLastProgress) {
+                        tagReaderProgressBar.style.width = `${progressPercent}%`;
+                        tagReaderProgressText.textContent = `Estable: ${progressPercent}%`;
+                        tagReaderLastProgress = progressPercent;
+                    }
+                }
+                
+                animationFrameId = requestAnimationFrame(updateProgressAnimation);
+            }
+            
+            animationFrameId = requestAnimationFrame(updateProgressAnimation);
+        }
+
+        function closeTagReader() {
+            tagReaderOpen = false;
+            tagReaderLocked = false;
+            activeReadIndex = null;
+            tagReaderPopover.classList.remove('open');
+            tagReaderPopover.setAttribute('aria-hidden', 'true');
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function completeTagAssignment(tagId) {
+            if (activeReadIndex === null || activeReadIndex === undefined) {
+                return;
+            }
+            tagReaderLocked = true;
+            mappings[activeReadIndex].physical = tagId;
+            renderMappings();
+            tagReaderProgressBar.style.width = '100%';
+            tagReaderProgressText.textContent = 'Estable: 100%';
+            tagReaderStatus.textContent = '✅ Tag físico asignado';
+            setTimeout(() => {
+                closeTagReader();
+            }, 900);
+        }
+
+        function handleTagReaderMessage(event) {
+            if (!tagReaderOpen || tagReaderLocked) return;
+            const data = event.data;
+            if (!data || data.type !== 'apriltag-detected') return;
+            const tagId = Number(data.id);
+            if (!Number.isFinite(tagId)) return;
+
+            const now = Date.now();
+            lastDetectionAt = now;
+            tagReaderStaleShown = false;
+
+            if (stableTagId !== tagId) {
+                stableTagId = tagId;
+                stableStart = now;
+                tagReaderProgressBar.style.width = '0%';
+                tagReaderLastProgress = 0;
+            }
+
+            const elapsed = now - (stableStart || now);
+            const progress = Math.min(elapsed / 5000, 1);
+            tagReaderProgressBar.style.width = `${Math.round(progress * 100)}%`;
+            tagReaderProgressText.textContent = `Estable: ${Math.round(progress * 100)}%`;
+            tagReaderStatus.textContent = 'Detectando tag...';
+
+            if (elapsed >= 5000) {
+                completeTagAssignment(tagId);
+            }
+        }
+
+        connectBtn.addEventListener('click', () => {
+            if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+                disconnectBLE();
+                connectBtn.textContent = 'Conectar ESP32';
+            } else {
+                connectBLE();
+            }
+        });
+
+        sendMapBtn.addEventListener('click', sendMapToESP32);
+        loadMapBtn.addEventListener('click', loadMapFromESP32);
+
+        addMappingBtn.addEventListener('click', () => {
+            mappings.push({ physical: null, logical: null });
+            renderMappings();
+        });
+
+        clearMappingsBtn.addEventListener('click', () => {
+            if (confirm('¿Limpiar todos los mapeos?')) {
+                mappings = [];
+                renderMappings();
+            }
+        });
+
+        if (!navigator.bluetooth) {
+            alert('Web Bluetooth no soportado. Usá Chrome o Edge en desktop.');
+        }
+
+        sendMapBtn.disabled = true;
+        loadMapBtn.disabled = true;
+        renderMappings();
+
+        closeTagReaderBtn.addEventListener('click', closeTagReader);
+        tagReaderPopover.addEventListener('click', (e) => {
+            if (e.target === tagReaderPopover) {
+                closeTagReader();
+            }
+        });
+        window.addEventListener('message', handleTagReaderMessage);
+    </script>
+</body>
+</html>

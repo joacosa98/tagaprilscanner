@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>AprilTag Detector</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Nunito:wght@400;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f6f1e8;
+    --panel: #ffffff;
+    --border: #e2d8c9;
+    --accent: #2b6cb0;
+    --accent2: #c05621;
+    --accent3: #2f855a;
+    --text: #2d3748;
+    --text-dim: #6b7280;
+    --mono: 'Nunito', sans-serif;
+    --display: 'Merriweather', serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: radial-gradient(1200px 800px at 10% 10%, #fff7ea 0%, transparent 50%),
+                radial-gradient(900px 700px at 90% 20%, #f2efe7 0%, transparent 55%),
+                var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    overflow: hidden;
+  }
+
+  #app {
+    display: grid;
+    grid-template-rows: 56px 1fr;
+    grid-template-columns: 1fr 280px;
+    height: 100vh;
+    gap: 0;
+  }
+
+  @media (max-width: 768px) {
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 48px 1fr 180px;
+    }
+  }
+
+  /* ─── TOP BAR ─── */
+  #topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    gap: 24px;
+    position: relative;
+  }
+
+  @media (max-width: 768px) {
+    #topbar {
+      padding: 0 12px;
+      gap: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .logo { font-size: 12px; letter-spacing: 2px; }
+    .stat-pill { min-width: 50px; }
+    .stat-label { font-size: 8px; }
+    .stat-value { font-size: 14px; }
+    .ctrl-btn { padding: 4px 12px; font-size: 10px; }
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+
+  .stat-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 60px;
+    flex-shrink: 0;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.6px;
+    text-transform: none;
+  }
+
+  .stat-value {
+    font-family: var(--display);
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+    transition: color 0.2s;
+  }
+
+  .stat-value.alert { color: var(--accent3); }
+
+  #topbar-spacer { flex: 1; }
+
+  .ctrl-btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    text-transform: none;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: #fff;
+    padding: 7px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .ctrl-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .ctrl-btn:hover::before { opacity: 0.12; }
+  .ctrl-btn:active::before { opacity: 0.2; }
+  .ctrl-btn.paused { border-color: var(--accent2); background: var(--accent2); color: #fff; }
+  .ctrl-btn.paused::before { background: #fff; }
+
+  /* ─── VIDEO AREA ─── */
+  #video-area {
+    position: relative;
+    background: #1f2933;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* corner brackets on video area */
+  .corner { display: none; }
+
+  #no-tags-msg {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    color: var(--text-dim);
+    text-transform: none;
+    pointer-events: none;
+    white-space: nowrap;
+    transition: opacity 0.4s;
+    z-index: 5;
+  }
+
+  #error-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(250,247,240,0.96);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px;
+    z-index: 20;
+    text-align: center;
+  }
+
+  #error-overlay.hidden { display: none; }
+
+  .error-icon {
+    font-family: var(--display);
+    font-size: 48px;
+    color: var(--accent2);
+    line-height: 1;
+  }
+
+  .error-title {
+    font-family: var(--display);
+    font-size: 16px;
+    letter-spacing: 0.6px;
+    color: var(--accent2);
+    text-transform: none;
+  }
+
+  .error-body {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.8;
+    max-width: 380px;
+  }
+
+  #loading-progress {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  /* ─── SIDE PANEL ─── */
+  #side-panel {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-size: 11px;
+    letter-spacing: 0.8px;
+    text-transform: none;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .big-count {
+    font-family: var(--display);
+    font-size: 58px;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--accent);
+    text-align: center;
+    transition: color 0.2s;
+  }
+
+  .big-count.has-tags { color: var(--accent3); }
+
+  .count-label {
+    font-size: 11px;
+    letter-spacing: 0.6px;
+    color: var(--text-dim);
+    text-align: center;
+    text-transform: none;
+    margin-top: 4px;
+  }
+
+  /* ─── STATUS BAR ─── */
+  #status-bar {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.4px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    box-shadow: none;
+    flex-shrink: 0;
+  }
+
+  .status-dot.inactive { background: var(--text-dim); box-shadow: none; }
+  .status-dot.error { background: var(--accent2); box-shadow: 0 0 4px var(--accent2); }
+
+  /* ─── LOADING ─── */
+  #loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(246,241,232,0.98);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 30;
+  }
+
+  #loading-overlay.hidden { display: none; }
+
+  .loading-title {
+    font-family: var(--display);
+    font-size: 14px;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+    text-transform: none;
+  }
+
+  .loading-bar-wrap {
+    width: 200px;
+    height: 2px;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .loading-bar {
+    height: 100%;
+    background: var(--accent);
+    animation: loadSlide 1.2s ease-in-out infinite;
+  }
+
+  @keyframes loadSlide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+
+  .loading-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.6px;
+  }
+
+  /* Mobile & Tablet Responsive */
+  @media (max-width: 768px) {
+    #side-panel {
+      border-left: none;
+      border-top: 1px solid var(--border);
+    }
+    .big-count { font-size: 48px; }
+    .panel-section { padding: 12px; }
+    .select-group { flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="logo">Robotito<span>Tag</span> · Detector</div>
+    <div class="divider"></div>
+    <div id="topbar-spacer"></div>
+    <button class="ctrl-btn" id="pause-btn">⏸ Pause</button>
+  </div>
+
+  <!-- VIDEO AREA -->
+  <div id="video-area">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+
+    <div id="no-tags-msg">No tags detected</div>
+
+    <div id="loading-overlay">
+      <div class="loading-title">Initializing Detector</div>
+      <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+      <div class="loading-sub" id="loading-sub">Loading WASM module…</div>
+    </div>
+
+    <div id="error-overlay" class="hidden">
+      <div class="error-icon">⚠</div>
+      <div class="error-title" id="error-title">Error</div>
+      <div class="error-body" id="error-body"></div>
+    </div>
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div id="side-panel">
+    <div class="panel-section">
+      <div class="panel-title">Detected</div>
+      <div class="big-count" id="big-count">0</div>
+      <div class="count-label">tags in frame</div>
+    </div>
+
+    <div id="status-bar">
+      <div class="status-dot inactive" id="status-dot"></div>
+      <span id="status-text">Initializing</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── DOM refs ──
+  const video        = document.getElementById('video');
+  const overlay      = document.getElementById('overlay');
+  const ctx          = overlay.getContext('2d');
+  const bigCount     = document.getElementById('big-count');
+  const noTagsMsg    = document.getElementById('no-tags-msg');
+  const pauseBtn     = document.getElementById('pause-btn');
+  const loadingOv    = document.getElementById('loading-overlay');
+  const loadingSub   = document.getElementById('loading-sub');
+  const errorOv      = document.getElementById('error-overlay');
+  const errorTitle   = document.getElementById('error-title');
+  const errorBody    = document.getElementById('error-body');
+  const statusDot    = document.getElementById('status-dot');
+  const statusText   = document.getElementById('status-text');
+  const loadingProgress = document.getElementById('loading-progress');
+
+  let loadStep = 0;
+  const totalSteps = 3; // Browser check, WASM load, Camera init
+
+  // ── State ──
+  let detector       = null;
+  let paused         = false;
+  let animId         = null;
+  let offscreen      = null;   // OffscreenCanvas / regular canvas for frame capture
+  let offCtx         = null;
+  let detectionBusy  = false;
+  let currentTags    = [];
+
+  // ── ID Mapping Configuration ──
+  // Map detected IDs to display IDs
+  // Example: If tag 3 is detected, display it as 5
+  const ID_MAPPING = {
+    // 3: 5,     // Detected ID 3 → Display as 5
+    // 10: 20,   // Detected ID 10 → Display as 20
+    // Add your mappings here
+  };
+
+  // Function to get mapped ID (returns original if no mapping exists)
+  function getMappedId(detectedId) {
+    return ID_MAPPING[detectedId] !== undefined ? ID_MAPPING[detectedId] : detectedId;
+  }
+
+  // Tag colors — cycle through these for visual variety
+  const TAG_COLORS = ['#4a6fa5','#d08c60','#7ba98e','#d4a373','#8a6fb5','#c97b84'];
+
+  function tagColor(id) {
+    return TAG_COLORS[id % TAG_COLORS.length];
+  }
+
+  // ── Show error ──
+  function showError(title, body) {
+    loadingOv.classList.add('hidden');
+    errorOv.classList.remove('hidden');
+    errorTitle.textContent = title;
+    errorBody.innerHTML = body;
+    statusDot.className = 'status-dot error';
+    statusText.textContent = 'Error';
+  }
+
+  // ── Set status ──
+  function setStatus(text, active) {
+    statusText.textContent = text;
+    statusDot.className = 'status-dot' + (active ? '' : ' inactive');
+  }
+
+  // ── Update loading progress ──
+  function updateLoadProgress(step, message) {
+    loadStep = step;
+    const percent = Math.round((loadStep / totalSteps) * 100);
+    if (loadingProgress) {
+      loadingProgress.textContent = `${percent}%`;
+    }
+    if (message && loadingSub) {
+      loadingSub.textContent = message;
+    }
+  }
+
+  // ── Init webcam ──
+  async function initCamera() {
+    setStatus('Requesting camera…', false);
+    loadingSub.textContent = 'Requesting camera access…';
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920, min: 640 }, 
+          height: { ideal: 1080, min: 480 },
+          aspectRatio: { ideal: 16/9 }
+        },
+        audio: false
+      });
+      video.srcObject = stream;
+      await new Promise((res, rej) => {
+        video.onloadedmetadata = res;
+        video.onerror = rej;
+      });
+      await video.play();
+    } catch (e) {
+      if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+        showError('Camera Access Denied', `
+          Camera permission was denied.<br><br>
+          To enable: click the camera icon in your browser's address bar and allow access,
+          then reload the page.<br><br>
+          <em>Note: Camera requires localhost or HTTPS.</em>
+        `);
+      } else {
+        showError('Camera Error', `Could not access camera: <em>${e.message}</em>`);
+      }
+      throw e;
+    }
+  }
+
+  // ── Init AprilTag detector ──
+  // Uses arenaxr/apriltag-js-standalone Apriltag wrapper class
+  async function initDetector() {
+    setStatus('Loading WASM…', false);
+    loadingSub.textContent = 'Compiling WASM detector…';
+
+    if (typeof Apriltag === 'undefined') {
+      showError('WASM Failed to Load', `
+        <code>apriltag-standalone.js</code> wrapper could not be found or failed to execute.<br><br>
+        Make sure <code>apriltag_wasm.js</code>, <code>apriltag_wasm.wasm</code>, and <code>apriltag-standalone.js</code> are present.<br><br>
+        Serve with: <code>python -m http.server</code>
+      `);
+      throw new Error('Apriltag class not found');
+    }
+
+    try {
+      // Create Apriltag instance with callback for when ready
+      detector = await new Promise((resolve, reject) => {
+        console.log('Creating Apriltag instance...');
+        try {
+          const instance = new Apriltag(() => {
+            console.log('AprilTag detector ready!');
+            resolve(instance);
+          });
+        } catch(e) {
+          console.error('Apriltag constructor error:', e);
+          reject(e);
+        }
+      });
+      
+      console.log('AprilTag detector initialized successfully');
+    } catch(e) {
+      console.error('Init error:', e);
+      showError('WASM Initialization Failed', `
+        Failed to initialize AprilTag detector: ${e.message}<br><br>
+        Make sure <code>apriltag_wasm.js</code>, <code>apriltag_wasm.wasm</code>, and <code>apriltag.js</code> are present.
+      `);
+      throw e;
+    }
+  }
+
+  // ── Resize overlay to match video ──
+  function syncOverlaySize() {
+    const r = video.getBoundingClientRect();
+    if (overlay.width !== r.width || overlay.height !== r.height) {
+      overlay.width  = r.width;
+      overlay.height = r.height;
+    }
+  }
+
+  // ── Draw detections ──
+  function drawDetections(tags) {
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    if (!tags || tags.length === 0) return;
+
+    // Scale: video actual rendered size vs natural size
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const rw = overlay.width;
+    const rh = overlay.height;
+
+    // letterbox / cover offsets
+    const videoAspect = vw / vh;
+    const canvasAspect = rw / rh;
+    let scale, offX = 0, offY = 0;
+
+    if (canvasAspect > videoAspect) {
+      // canvas wider: fit height, crop sides
+      scale = rh / vh;
+      offX = (rw - vw * scale) / 2;
+    } else {
+      // canvas taller: fit width, crop top/bottom
+      scale = rw / vw;
+      offY = (rh - vh * scale) / 2;
+    }
+
+    tags.forEach(tag => {
+      const detectedId = tag.id !== undefined ? tag.id : tag.tagId;
+      const displayId = getMappedId(detectedId);
+      const corners = tag.corners || tag.corner;
+      if (!corners || corners.length < 4) return;
+
+      const color = tagColor(detectedId);
+
+      // Map corners — API returns [{x,y},...] objects
+      const pts = corners.map(c => ({
+        x: (c.x !== undefined ? c.x : c[0]) * scale + offX,
+        y: (c.y !== undefined ? c.y : c[1]) * scale + offY
+      }));
+
+      // Polygon
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Fill very subtly
+      ctx.fillStyle = color + '1a';
+      ctx.fill();
+
+      // Corner dots
+      pts.forEach((p, i) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, i === 0 ? 6 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = i === 0 ? '#fff' : color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+
+      // Center label
+      const cx = pts.reduce((s, p) => s + p.x, 0) / 4;
+      const cy = pts.reduce((s, p) => s + p.y, 0) / 4;
+
+      ctx.font = '700 26px "Merriweather", serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Shadow / glow
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = '#000';
+      ctx.fillText(displayId, cx + 1.5, cy + 1.5);
+      ctx.fillStyle = color;
+      ctx.fillText(displayId, cx, cy);
+      ctx.shadowBlur = 0;
+
+      // Small "ID" label above
+      ctx.font = '11px "Nunito", sans-serif';
+      ctx.fillStyle = color + 'cc';
+      ctx.fillText('TAG', cx, cy - 22);
+    });
+  }
+
+  // ── Update side panel ──
+  function updatePanel(tags) {
+    const count = tags ? tags.length : 0;
+    bigCount.textContent  = count;
+    if (count > 0) {
+      // Keep big count highlight only.
+    }
+    bigCount.className    = 'big-count' + (count > 0 ? ' has-tags' : '');
+    noTagsMsg.style.opacity = count > 0 ? '0' : '0.5';
+  }
+
+  function emitTagToParent(tags) {
+    if (!tags || tags.length === 0) return;
+    const tag = tags[0];
+    const detectedId = tag.id !== undefined ? tag.id : tag.tagId;
+    if (detectedId === undefined || detectedId === null) return;
+    const mappedId = getMappedId(detectedId);
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'apriltag-detected',
+        id: mappedId,
+        originalId: detectedId,
+        ts: Date.now()
+      }, '*');
+    }
+  }
+
+  // ── FPS ──
+  // ── Detection via postMessage to avoid blocking ──
+  // We run detection inline but yield between frames using rAF at ~15fps
+  const TARGET_INTERVAL = 1000 / 15;
+  let lastDetectTime = 0;
+
+  function getGrayscale(imageData) {
+    const d = imageData.data;
+    const gray = new Uint8Array(imageData.width * imageData.height);
+    for (let i = 0; i < gray.length; i++) {
+      const p = i * 4;
+      // Luma: 0.299R + 0.587G + 0.114B
+      gray[i] = (d[p] * 77 + d[p+1] * 150 + d[p+2] * 29) >> 8;
+    }
+    return gray;
+  }
+
+  async function detectFrame(now) {
+    if (paused || !detector || video.readyState < 2) {
+      animId = requestAnimationFrame(detectFrame);
+      return;
+    }
+
+    syncOverlaySize();
+
+    // Throttle detection to ~15fps
+    if (now - lastDetectTime >= TARGET_INTERVAL && !detectionBusy) {
+      lastDetectTime = now;
+      detectionBusy = true;
+
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+
+      if (vw && vh) {
+        // Ensure offscreen canvas matches
+        if (!offscreen || offscreen.width !== vw || offscreen.height !== vh) {
+          offscreen = document.createElement('canvas');
+          offscreen.width  = vw;
+          offscreen.height = vh;
+          offCtx = offscreen.getContext('2d', { willReadFrequently: true });
+        }
+
+        // Draw current video frame (un-mirrored)
+        offCtx.drawImage(video, 0, 0, vw, vh);
+        const imageData = offCtx.getImageData(0, 0, vw, vh);
+        const gray = getGrayscale(imageData);
+
+        try {
+          // API: apriltag.detect(Uint8Array grayscale, width, height) → Array
+          const result = await detector.detect(gray, vw, vh);
+          currentTags = Array.isArray(result) ? result : [];
+        } catch (e) {
+          console.warn('Detection error:', e);
+          currentTags = [];
+        }
+
+        drawDetections(currentTags);
+        updatePanel(currentTags);
+        emitTagToParent(currentTags);
+      }
+
+      detectionBusy = false;
+    } else if (!detectionBusy) {
+      // Redraw overlay even if no new detection (keep it aligned)
+      drawDetections(currentTags);
+    }
+
+    animId = requestAnimationFrame(detectFrame);
+  }
+
+  // ── Pause / resume ──
+  pauseBtn.addEventListener('click', () => {
+    paused = !paused;
+    if (paused) {
+      pauseBtn.textContent = '▶ Resume';
+      pauseBtn.classList.add('paused');
+      setStatus('Paused', false);
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+    } else {
+      pauseBtn.textContent = '⏸ Pause';
+      pauseBtn.classList.remove('paused');
+      setStatus('Running', true);
+    }
+  });
+
+  // ── Resize handler ──
+  window.addEventListener('resize', syncOverlaySize);
+
+  // ── Dynamically load apriltag scripts and catch 404 / parse errors ──
+  function loadWasmScript() {
+    return new Promise((resolve, reject) => {
+      // First load apriltag_wasm.js
+      const s1 = document.createElement('script');
+      s1.src = 'apriltag_wasm.js';
+      s1.onload = () => {
+        // Then load apriltag-standalone.js wrapper
+        const s2 = document.createElement('script');
+        s2.src = 'apriltag-standalone.js';
+        s2.onload = () => resolve();
+        s2.onerror = () => reject(new Error('APRILTAG_WRAPPER_LOAD_FAILED'));
+        document.head.appendChild(s2);
+      };
+      s1.onerror = () => reject(new Error('SCRIPT_LOAD_FAILED'));
+      document.head.appendChild(s1);
+    });
+  }
+
+  // ── Check browser support ──
+  function checkBrowserSupport() {
+    const missing = [];
+    if (!navigator.mediaDevices?.getUserMedia) missing.push('getUserMedia');
+    if (!WebAssembly) missing.push('WebAssembly');
+    
+    if (missing.length > 0) {
+      showError('Browser Not Supported', `
+        Your browser lacks: <strong>${missing.join(', ')}</strong><br><br>
+        Use <strong>Chrome 89+</strong> or <strong>Edge 89+</strong>
+      `);
+      return false;
+    }
+    return true;
+  }
+
+  // ── Check secure context ──
+  function checkSecureContext() {
+    if (!window.isSecureContext) {
+      showError('Insecure Context', `
+        Camera requires HTTPS or localhost.<br><br>
+        <strong>Current URL:</strong> ${window.location.href}<br><br>
+        <strong>Solutions:</strong><br>
+        • Use <code>localhost</code> or <code>127.0.0.1</code><br>
+        • Serve over HTTPS<br>
+        • Run: <code>python -m http.server 8000</code> and visit <code>http://localhost:8000</code>
+      `);
+      return false;
+    }
+    return true;
+  }
+
+  // ── Bootstrap ──
+  async function main() {
+    updateLoadProgress(0, 'Checking compatibility…');
+    
+    // Check browser compatibility
+    if (!checkBrowserSupport()) return;
+    if (!checkSecureContext()) return;
+
+    updateLoadProgress(1, 'Loading apriltag_wasm.js…');
+
+    // 1. Load WASM JS glue — catch 404 immediately via onerror
+    try {
+      await loadWasmScript();
+    } catch(e) {
+      showError('WASM Files Not Found', `
+        <code>apriltag_wasm.js</code> was not found next to <code>index.html</code>.<br><br>
+        Make sure all files are present:<br>
+        • <code>apriltag_wasm.js</code><br>
+        • <code>apriltag_wasm.wasm</code><br>
+        • <code>apriltag-standalone.js</code><br><br>
+        Then serve with: <code>python -m http.server</code><br>
+        and open <code>http://localhost:8000</code>
+      `);
+      return;
+    }
+
+    updateLoadProgress(2, 'Initializing camera…');
+    
+    // 2. Start camera (don't wait for WASM — both can load in parallel)
+    const cameraPromise = initCamera().catch(e => { throw Object.assign(e, {_camera: true}); });
+
+    updateLoadProgress(3, 'Compiling WASM detector…');
+    
+    // 3. Init detector (Apriltag global should now exist from the loaded script)
+    try {
+      await initDetector();
+    } catch(e) { return; }
+
+    // 4. Wait for camera to be ready
+    try {
+      await cameraPromise;
+    } catch(e) { return; }
+
+    loadingOv.classList.add('hidden');
+    setStatus('Running', true);
+    animId = requestAnimationFrame(detectFrame);
+  }
+
+  main();
+
+})();
+</script>
+</body>
+</html>
