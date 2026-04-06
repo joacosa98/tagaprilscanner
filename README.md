@@ -43,9 +43,9 @@ Sistema de detección y mapeo de AprilTags para robots móviles con integración
 
 ```
 tagaprilscanner/
-├── index.html                  # Detector principal de AprilTags (cámara web)
-├── apriltag-mapper.html        # Configurador de rutas y estaciones
-├── apriltag-map-builder.html  # Constructor de mapeo físico ↔ lógico
+├── index.html                  # Configurador de rutas y estaciones (RAÍZ)
+├── tag-reader.html             # Detector de AprilTags con cámara web (embebido)
+├── apriltag-map-builder.html   # Constructor de mapeo físico ↔ lógico
 ├── apriltag.js                 # Wrapper con Web Workers (Comlink)
 ├── apriltag-standalone.js      # Wrapper standalone (sin workers)
 ├── apriltag_wasm.js            # WASM glue code (descargarlo)
@@ -60,44 +60,7 @@ tagaprilscanner/
 
 ## 🎯 Componentes y Uso
 
-### 1. **index.html** - Detector Principal
-
-**Propósito**: Detecta AprilTags en tiempo real usando la cámara web.
-
-**Características**:
-- Detección en tiempo real (~15 FPS)
-- Visualización con overlay gráfico
-- Mapeo de IDs (físico → lógico)
-- Modo embebido para integración en iframe
-
-**Uso**:
-```html
-<!-- Embeber en otra página -->
-<iframe src="index.html?embedded=1"></iframe>
-
-<!-- Recibir detecciones vía postMessage -->
-<script>
-window.addEventListener('message', (e) => {
-  if (e.data.type === 'apriltag-detected') {
-    console.log('Tag detected:', e.data.id);
-  }
-});
-</script>
-```
-
-**Configuración de mapeo**:
-```javascript
-// En index.html, línea ~457
-const ID_MAPPING = {
-  3: 5,     // Tag físico 3 → Mostrar como 5
-  10: 20,   // Tag físico 10 → Mostrar como 20
-  // Agregar más mapeos según necesites
-};
-```
-
----
-
-### 2. **apriltag-mapper.html** - Configurador de Rutas
+### 1. **index.html** - Configurador de Rutas (Raíz)
 
 **Propósito**: Configurar estaciones, secuencias de recorrido y enviarlas al ESP32 vía BLE.
 
@@ -118,7 +81,36 @@ const ID_MAPPING = {
 6. **Enviar**: Click en "Enviar Mapa + Secuencias"
 
 **Tags Reservados**:
-- `1-4`: Reservados para control del sistema (inicio, fin, checkpoints)
+- `1-4`: Reservados para control del sistema
+
+---
+
+### 2. **tag-reader.html** - Detector de AprilTags
+
+**Propósito**: Detecta AprilTags en tiempo real usando la cámara web.
+
+**Características**:
+- Detección en tiempo real (~15 FPS)
+- Visualización con overlay gráfico
+- Mapeo de IDs (físico → lógico)
+- Modo embebido para integración en iframe
+
+**Uso embebido**:
+```html
+<!-- Embeber en otra página -->
+<iframe src="tag-reader.html?embedded=1"></iframe>
+
+<!-- Recibir detecciones vía postMessage -->
+<script>
+window.addEventListener('message', (e) => {
+  if (e.data.type === 'apriltag-detected') {
+    console.log('Tag detected:', e.data.id);
+  }
+});
+</script>
+```
+
+**Nota**: Este archivo es usado automáticamente por `index.html` cuando haces click en "Leer tag".
 
 ---
 
@@ -128,7 +120,7 @@ const ID_MAPPING = {
 
 **Características**:
 - Mapeo directo de IDs físicos a lógicos
-- Lectura de tags por cámara
+- Lectura de tags por cámara (usa `tag-reader.html`)
 - Envío y carga desde ESP32
 - Validación de duplicados
 

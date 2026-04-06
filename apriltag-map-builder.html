@@ -139,6 +139,11 @@
             color: var(--muted);
         }
 
+        .note.error {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
         .mapping-list {
             display: grid;
             gap: 12px;
@@ -418,6 +423,7 @@
 
     <script>
         const RESERVED_LOGICAL = new Set([1, 2, 3, 4]);
+        const RESERVED_TAGS = new Set([1, 2, 3, 4]);
 
         let bleDevice = null;
         let bleServer = null;
@@ -898,7 +904,7 @@
             tagReaderPopover.classList.add('open');
             tagReaderPopover.setAttribute('aria-hidden', 'false');
             if (!tagReaderFrame.src) {
-                tagReaderFrame.src = 'index.html?embedded=1';
+                tagReaderFrame.src = 'tag-reader.html?embedded=1';
             }
 
             if (animationFrameId) {
@@ -968,6 +974,17 @@
             const tagId = Number(data.id);
             if (!Number.isFinite(tagId)) return;
 
+            // Verificar si es un tag reservado - esto debe ser ANTES de cualquier progreso
+            if (RESERVED_TAGS.has(tagId)) {
+                tagReaderProgressBar.style.width = '0%';
+                tagReaderProgressText.textContent = 'Tag reservado. Probá con otro.';
+                tagReaderStatus.textContent = '⚠ Los tags 1, 2, 3 y 4 están reservados para control.';
+                tagReaderStatus.classList.add('error');
+                stableTagId = tagId;  // Marcar como visto para no reintentar
+                stableStart = null;    // Asegurar que no hay progreso
+                return;
+            }
+
             const now = Date.now();
             lastDetectionAt = now;
             tagReaderStaleShown = false;
@@ -983,6 +1000,7 @@
             const progress = Math.min(elapsed / 5000, 1);
             tagReaderProgressBar.style.width = `${Math.round(progress * 100)}%`;
             tagReaderProgressText.textContent = `Estable: ${Math.round(progress * 100)}%`;
+            tagReaderStatus.classList.remove('error');
             tagReaderStatus.textContent = 'Detectando tag...';
 
             if (elapsed >= 5000) {

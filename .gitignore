@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node (si lo usas en el futuro)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.vscode/
+.idea/
+
+# Archivos temporales
+*.swp
+*.swo
+*~
+
+# Vercel
+.vercel
