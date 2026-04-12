@@ -42,10 +42,29 @@
     gap: 0;
   }
 
+  /* Standalone mode (when not embedded in iframe) */
+  body.standalone #app {
+    height: 600px;
+    max-width: 1000px;
+    margin: 40px auto;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(2, 6, 23, 0.15);
+    overflow: hidden;
+  }
+
   @media (max-width: 768px) {
     #app {
       grid-template-columns: 1fr;
-      grid-template-rows: 48px 1fr 180px;
+      grid-template-rows: 48px minmax(280px, 1fr) minmax(120px, 28vh);
+      height: 100svh;
+    }
+    
+    body.standalone #app {
+      height: 100svh;
+      max-width: 100%;
+      margin: 0;
+      border-radius: 0;
+      aspect-ratio: auto;
     }
   }
 
@@ -365,9 +384,11 @@
       border-left: none;
       border-top: 1px solid var(--border);
     }
+    #video-area { min-height: 280px; }
     .big-count { font-size: 48px; }
     .panel-section { padding: 12px; }
     .select-group { flex-direction: column; gap: 8px; }
+    .loading-bar-wrap { width: min(70vw, 240px); }
   }
 </style>
 </head>
@@ -428,6 +449,12 @@
 (function() {
   'use strict';
 
+  // Detect if running embedded in iframe or standalone
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === '1';
+  if (!isEmbedded) {
+    document.body.classList.add('standalone');
+  }
+
   // ── DOM refs ──
   const video        = document.getElementById('video');
   const overlay      = document.getElementById('overlay');
@@ -460,6 +487,10 @@
   // Map detected IDs to display IDs
   // Example: If tag 3 is detected, display it as 5
   const ID_MAPPING = {
+    4:7,
+    2:8,
+    3:9,
+    5:1
     // 3: 5,     // Detected ID 3 → Display as 5
     // 10: 20,   // Detected ID 10 → Display as 20
     // Add your mappings here
@@ -694,9 +725,23 @@
 
   function emitTagToParent(tags) {
     if (!tags || tags.length === 0) return;
-    const tag = tags[0];
-    const detectedId = tag.id !== undefined ? tag.id : tag.tagId;
-    if (detectedId === undefined || detectedId === null) return;
+    const detectedIds = tags
+      .map(tag => (tag.id !== undefined ? tag.id : tag.tagId))
+      .filter(id => Number.isFinite(id));
+    if (detectedIds.length === 0) return;
+    const uniqueIds = Array.from(new Set(detectedIds));
+    if (uniqueIds.length > 1) {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'apriltag-error',
+          code: 'multiple-ids',
+          ids: uniqueIds,
+          ts: Date.now()
+        }, '*');
+      }
+      return;
+    }
+    const detectedId = uniqueIds[0];
     const mappedId = getMappedId(detectedId);
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({

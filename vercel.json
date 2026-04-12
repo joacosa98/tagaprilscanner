@@ -5,7 +5,7 @@
       "destination": "/tag-reader.html"
     },
     {
-      "source": "/:path((?!.*\\.).*)",
+      "source": "/:path((?!api(?:/|$))(?!.*\\.).*)",
       "destination": "/"
     }
   ]

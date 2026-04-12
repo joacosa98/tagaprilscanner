@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AprilTag Mapper - Configurador</title>
+    <title>Configurador robotito</title>
     <style>
         :root {
             --ink: #0f172a;
@@ -161,14 +161,25 @@
             align-items: center;
         }
 
-        .station-index {
-            background: #0ea5e9;
-            color: white;
-            padding: 6px 10px;
-            border-radius: 10px;
+        .drag-handle {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e0f2fe;
+            color: #0ea5e9;
             font-weight: 800;
-            min-width: 40px;
-            text-align: center;
+            font-size: 20px;
+            cursor: grab;
+            user-select: none;
+            letter-spacing: 2px;
+            border: 1px solid rgba(14, 165, 233, 0.35);
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
         }
 
         .field {
@@ -189,10 +200,26 @@
             font-size: 14px;
         }
 
+        .field select {
+            padding: 9px 12px;
+            border: 1px solid #cbd5f5;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
         .station-actions {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+        }
+
+        .station-error-inline {
+            align-self: center;
+            color: #b91c1c;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 0 2px;
         }
 
         .tag-row {
@@ -223,6 +250,85 @@
             background: #f8fafc;
         }
 
+        .sequence-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .sequence-modal-body {
+            max-height: 70vh;
+            overflow: auto;
+            padding-right: 6px;
+        }
+
+        .sequence-modal-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .sequence-modal-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sequence-variant {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 12px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 14px;
+            background: #f8fafc;
+        }
+
+        .seq-badge {
+            background: #e2e8f0;
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 6px 10px;
+            border-radius: 999px;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .sequence-flow {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .sequence-node {
+            width: 86px;
+            height: 86px;
+            border-radius: 999px;
+            border: 2px solid rgba(14, 165, 233, 0.6);
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            line-height: 1.1;
+            color: var(--ink);
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+        }
+
+        .seq-arrow {
+            color: #94a3b8;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
         .error-box {
             border: 1px solid #fecaca;
             background: #fef2f2;
@@ -241,6 +347,15 @@
         .sequence-card.error {
             border-color: #fecaca;
             box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12);
+        }
+
+        .station-card.dragging {
+            opacity: 0.55;
+        }
+
+        .station-card.drag-over {
+            border-color: rgba(14, 165, 233, 0.6);
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
         }
 
         .sequence-header {
@@ -339,6 +454,28 @@
             gap: 12px;
         }
 
+        .tag-modal-body {
+            display: grid;
+            gap: 12px;
+        }
+
+        .tag-preview {
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tag-preview img {
+            width: min(140px, 30vw);
+            max-height: 30svh;
+            height: auto;
+            display: block;
+        }
+
         .reader-frame {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -366,7 +503,7 @@
             height: 100%;
             width: 0%;
             background: var(--accent-2);
-            transition: width 0.12s linear;
+            transition: none;
         }
 
         @keyframes pulse {
@@ -405,6 +542,10 @@
             background: #e0f2fe;
             color: #075985;
             border: 1px solid #0ea5e9;
+        }
+
+        .debug-hidden {
+            display: none !important;
         }
 
         @keyframes slideIn {
@@ -446,25 +587,67 @@
                 font-size: 13px;
             }
         }
+
+        @media (max-width: 768px) {
+            .popover {
+                padding: 12px;
+                align-items: center;
+            }
+
+            .popover-card {
+                width: min(520px, 96vw);
+                max-height: 92svh;
+                border-radius: 16px;
+                padding: 16px;
+                grid-template-rows: auto minmax(200px, 1fr) auto;
+            }
+
+            .reader-frame {
+                aspect-ratio: 16 / 9;
+                height: auto;
+                min-height: 200px;
+            }
+
+            .popover.fullscreen {
+                padding: 0;
+                align-items: stretch;
+            }
+
+            .popover.fullscreen .popover-card {
+                width: 100%;
+                height: 100svh;
+                max-height: 100svh;
+                border-radius: 0;
+                padding: 12px;
+                grid-template-rows: auto minmax(220px, 1fr) auto;
+            }
+
+            .popover.fullscreen .reader-frame {
+                aspect-ratio: auto;
+                height: 100%;
+                min-height: 220px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card hero">
-            <h1>AprilTag Mapper</h1>
+            <h1>Configurador robotito</h1>
             <p>Configurador para docentes: definí estaciones, orden esperado y asigná tags físicos sin pensar en IDs lógicos.</p>
             <div class="status disconnected" id="status">● Desconectado</div>
         </div>
 
         <div class="card">
             <div class="toolbar">
-                <button class="btn-primary" id="connectBtn">Conectar ESP32</button>
+                <button class="btn-primary" id="connectBtn">Conectarse con robotito</button>
                 <button class="btn-success" id="sendAllBtn" disabled>Enviar Secuencias</button>
-                <button class="btn-secondary" id="loadAllBtn" disabled>Cargar Secuencias</button>
-                <button class="btn-secondary" id="startMonitorBtn" disabled>Iniciar Monitor</button>
-                <button class="btn-secondary" id="stopMonitorBtn" disabled>Pausar Monitor</button>
+                <button class="btn-secondary" id="loadAllBtn" disabled>Mostrar secuencia actual</button>
+                <button class="btn-secondary" id="showStartTagBtn">Mostrar botón de inicio</button>
+                <button class="btn-secondary" id="startMonitorBtn" data-debug hidden disabled>Iniciar Monitor</button>
+                <button class="btn-secondary" id="stopMonitorBtn" data-debug hidden disabled>Pausar Monitor</button>
             </div>
-            <p class="note" style="margin-top: 10px;">Tip: el monitor ayuda a detectar un tag y asignarlo a una estación.</p>
+            <p class="note" data-debug hidden style="margin-top: 10px;">Tip: el monitor ayuda a detectar un tag y asignarlo a una estación.</p>
         </div>
 
         <div class="grid-2">
@@ -480,34 +663,32 @@
 
             <div class="card">
                 <h2>Ruta Esperada</h2>
-                <p class="note">Se genera automáticamente con el orden de las estaciones.</p>
                 <div class="error-box" id="validationErrors"></div>
-                <div class="route-preview" id="routePreview" style="margin-top: 14px;"></div>
                 <div style="margin-top: 16px;">
-                    <h3 style="font-size: 14px; margin-bottom: 6px;">Secuencias Esperadas</h3>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
-                        <button class="btn-primary" id="addSequenceBtn">Nueva secuencia</button>
-                        <button class="btn-secondary" id="deleteSequenceBtn">Eliminar secuencia</button>
+                    <h3 style="font-size: 14px; margin-bottom: 6px;">Grupos de Intercambio</h3>
+                    <p class="note" style="margin-bottom: 8px;">Mostramos las estaciones por grupo usando sus nombres.</p>
+                    <div id="groupList" class="sequence-list"></div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <h3 style="font-size: 14px; margin-bottom: 6px;">Secuencias posibles</h3>
+                    <p class="note" style="margin-bottom: 8px;">Combinaciones generadas por los grupos de intercambio.</p>
+                    <div class="sequence-tools">
+                        <button class="btn-secondary" id="showSequencesBtn">Mostrar todas las secuencias posibles</button>
                     </div>
-                    <div id="sequenceList" class="sequence-list"></div>
                 </div>
-                <div style="margin-top: 16px;">
-                    <h3 style="font-size: 14px; margin-bottom: 6px;">Último Tag Detectado</h3>
-                    <div id="lastDetected" class="chip">Ninguno</div>
-                </div>
-                <div style="margin-top: 16px;">
+                <div data-debug hidden style="margin-top: 16px;">
                     <h3 style="font-size: 14px; margin-bottom: 6px;">Payloads BLE</h3>
                     <pre id="seqPayload" class="mono" style="background:#f1f5f9; padding:10px; border-radius:8px;">[]</pre>
                 </div>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" data-debug hidden>
             <h2>Monitor de Detecciones</h2>
             <div class="monitor" id="detectionLog">Esperando detecciones...</div>
         </div>
 
-        <details class="card">
+        <details class="card" data-debug hidden>
             <summary style="font-weight:700; cursor:pointer;">Configuración BLE (avanzado)</summary>
             <div style="margin-top: 12px; display:grid; gap:10px;">
                 <div class="uuid-grid"><label>Service UUID</label><input type="text" id="serviceUuid" value="0000abf0-0000-1000-8000-00805f9b34fb"></div>
@@ -518,7 +699,7 @@
         </details>
     </div>
 
-    <div class="popover" id="tagReaderPopover" aria-hidden="true">
+    <div class="popover fullscreen" id="tagReaderPopover" aria-hidden="true">
         <div class="popover-card">
             <div class="popover-header">
                 <div>
@@ -540,6 +721,38 @@
         </div>
     </div>
 
+    <div class="popover" id="sequenceModal" aria-hidden="true">
+        <div class="popover-card">
+            <div class="popover-header">
+                <div>
+                    <h3 style="font-size: 18px;">Secuencias posibles</h3>
+                    <p class="note">Se consideran los grupos de intercambio definidos.</p>
+                </div>
+                <button class="btn-secondary" id="closeSequencesBtn">Cerrar</button>
+            </div>
+            <div class="sequence-modal-body">
+                <div id="sequenceModalContent" style="display: grid; gap: 12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="popover" id="startTagModal" aria-hidden="true">
+        <div class="popover-card">
+            <div class="popover-header">
+                <div>
+                    <h3 style="font-size: 18px;">Botón de inicio</h3>
+                    <p class="note">Usá este tag como referencia visual al iniciar.</p>
+                </div>
+                <button class="btn-secondary" id="closeStartTagBtn">Cerrar</button>
+            </div>
+            <div class="tag-modal-body">
+                <div class="tag-preview">
+                    <img src="tag36h11-5.svg" alt="AprilTag 36h11 ID 5">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let bleDevice = null;
         let bleServer = null;
@@ -549,9 +762,7 @@
 
         let isMonitoring = false;
         let stations = [];
-        let sequences = [];
-        let activeSequenceIndex = -1;
-        let lastDetectedLogical = null;
+        let sequence = [];
         let activeTagStationIndex = null;
         let tagReaderOpen = false;
         let stableTagId = null;
@@ -559,7 +770,12 @@
         let lastDetectionAt = null;
         let tagReaderTimer = null;
         let tagReaderLocked = false;
+        let tagProgressValue = 0;
+        let draggedSeqIndex = null;
+        let dragOverCard = null;
         const RESERVED_TAGS = new Set([1, 2, 3, 4]);
+        const MAX_SEQS = 10;
+        const GROUP_OPTIONS = ['', 'A', 'B', 'C', 'D'];
 
         const statusEl = document.getElementById('status');
         const connectBtn = document.getElementById('connectBtn');
@@ -573,12 +789,16 @@
         const clearStationsBtn = document.getElementById('clearStationsBtn');
         const stationsEl = document.getElementById('stations');
         const routePreviewEl = document.getElementById('routePreview');
-        const sequenceListEl = document.getElementById('sequenceList');
-        const addSequenceBtn = document.getElementById('addSequenceBtn');
-        const deleteSequenceBtn = document.getElementById('deleteSequenceBtn');
-        const lastDetectedEl = document.getElementById('lastDetected');
+        const groupListEl = document.getElementById('groupList');
         const seqPayloadEl = document.getElementById('seqPayload');
         const validationErrorsEl = document.getElementById('validationErrors');
+        const showSequencesBtn = document.getElementById('showSequencesBtn');
+        const sequenceModal = document.getElementById('sequenceModal');
+        const closeSequencesBtn = document.getElementById('closeSequencesBtn');
+        const sequenceModalContent = document.getElementById('sequenceModalContent');
+        const showStartTagBtn = document.getElementById('showStartTagBtn');
+        const startTagModal = document.getElementById('startTagModal');
+        const closeStartTagBtn = document.getElementById('closeStartTagBtn');
 
         const tagReaderPopover = document.getElementById('tagReaderPopover');
         const tagReaderFrame = document.getElementById('tagReaderFrame');
@@ -598,6 +818,20 @@
             statusEl.textContent = text;
         }
 
+        function applyDebugMode() {
+            const params = new URLSearchParams(window.location.search);
+            const debugEnabled = params.get('debug') === 'true';
+            document.querySelectorAll('[data-debug]').forEach((el) => {
+                if (debugEnabled) {
+                    el.hidden = false;
+                    el.classList.remove('debug-hidden');
+                } else {
+                    el.hidden = true;
+                    el.classList.add('debug-hidden');
+                }
+            });
+        }
+
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
@@ -606,17 +840,168 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        function buildPersistedState() {
+            return {
+                version: 1,
+                stations: stations.map((station, idx) => ({
+                    name: station.name || `Estación ${idx + 1}`,
+                    physicalId: Number.isFinite(station.physicalId) ? station.physicalId : null,
+                    group: station.group || ''
+                })),
+                sequence: sequence.slice()
+            };
+        }
+
+        function applyPersistedState(data) {
+            const loadedStations = Array.isArray(data?.stations) ? data.stations : [];
+            stations = loadedStations.map((station, idx) => ({
+                name: typeof station?.name === 'string' ? station.name : `Estación ${idx + 1}`,
+                physicalId: Number.isFinite(station?.physicalId) ? station.physicalId : null,
+                group: typeof station?.group === 'string' ? station.group : ''
+            }));
+
+            const count = stations.length;
+            let loadedSequence = Array.isArray(data?.sequence)
+                ? data.sequence.map(Number).filter(Number.isFinite)
+                : [];
+            loadedSequence = loadedSequence.filter(id => id >= 1 && id <= count);
+            const uniqueCount = new Set(loadedSequence).size;
+
+            if (loadedSequence.length === count && uniqueCount === loadedSequence.length) {
+                sequence = loadedSequence;
+            } else {
+                sequence = stations.map((_, idx) => idx + 1);
+            }
+        }
+
+        async function loadLastSequence() {
+            try {
+                const response = await fetch('/api/sequence', { cache: 'no-store' });
+                if (response.status === 404) {
+                    renderStations();
+                    return;
+                }
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                applyPersistedState(data);
+                renderStations();
+            } catch (error) {
+                console.warn('No se pudo cargar la última secuencia:', error);
+                renderStations();
+            }
+        }
+
+        async function saveLastSequence() {
+            try {
+                const response = await fetch('/api/sequence', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildPersistedState())
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.warn('No se pudo guardar la última secuencia:', error);
+            }
+        }
+
+        function uniquePermutations(values) {
+            const sorted = [...values].sort((a, b) => a - b);
+            const used = new Array(sorted.length).fill(false);
+            const result = [];
+            const path = [];
+
+            function backtrack() {
+                if (path.length === sorted.length) {
+                    result.push(path.slice());
+                    return;
+                }
+                for (let i = 0; i < sorted.length; i++) {
+                    if (used[i]) continue;
+                    if (i > 0 && sorted[i] === sorted[i - 1] && !used[i - 1]) continue;
+                    used[i] = true;
+                    path.push(sorted[i]);
+                    backtrack();
+                    path.pop();
+                    used[i] = false;
+                }
+            }
+
+            backtrack();
+            return result;
+        }
+
+        function dedupeSequences(seqs) {
+            const seen = new Set();
+            return seqs.filter(seq => {
+                const key = seq.join(',');
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        function getExpandedSequences() {
+            if (sequence.length === 0) return [];
+
+            const groupMap = new Map();
+            sequence.forEach((logicalId, pos) => {
+                const station = stations[logicalId - 1];
+                const label = station && station.group ? station.group.trim() : '';
+                if (!label) return;
+                if (!groupMap.has(label)) {
+                    groupMap.set(label, { positions: [], values: [] });
+                }
+                const group = groupMap.get(label);
+                group.positions.push(pos);
+                group.values.push(logicalId);
+            });
+
+            let seqs = [sequence.slice()];
+            for (const group of groupMap.values()) {
+                if (group.positions.length < 2) continue;
+                const perms = uniquePermutations(group.values);
+                const next = [];
+                seqs.forEach(seq => {
+                    perms.forEach(perm => {
+                        const nextSeq = seq.slice();
+                        group.positions.forEach((pos, idx) => {
+                            nextSeq[pos] = perm[idx];
+                        });
+                        next.push(nextSeq);
+                    });
+                });
+                seqs = dedupeSequences(next);
+            }
+
+            return seqs;
+        }
+
         function validateStationsAndSequences() {
             const errors = [];
             const stationErrors = new Set();
+            const stationMissingTag = new Set();
             const sequenceErrors = new Set();
 
             const seenPhysical = new Map();
-            stations.forEach((station, idx) => {
-                const physical = station.physicalId;
+            const activeStationIndices = new Set();
+            sequence.forEach((logicalId) => {
+                if (!Number.isFinite(logicalId)) return;
+                const idx = logicalId - 1;
+                if (idx < 0 || idx >= stations.length) return;
+                activeStationIndices.add(idx);
+            });
+
+            activeStationIndices.forEach((idx) => {
+                const station = stations[idx];
+                const physical = station?.physicalId;
                 if (!Number.isFinite(physical)) {
                     stationErrors.add(idx);
-                    errors.push({ type: 'station', index: idx, msg: `Estación ${idx + 1}: falta tag físico.` });
+                    stationMissingTag.add(idx);
+                    errors.push({ type: 'station', index: idx, code: 'missing-physical', msg: `Estación ${idx + 1}: falta tag físico.` });
                     return;
                 }
                 if (physical < 0 || physical > 255) {
@@ -636,32 +1021,31 @@
                 }
             });
 
-            if (sequences.length > 0 && stations.length === 0) {
-                errors.push({ type: 'general', msg: 'Hay secuencias definidas pero no hay estaciones.' });
-                sequences.forEach((_, idx) => sequenceErrors.add(idx));
+            if (sequence.length === 0 && stations.length > 0) {
+                sequenceErrors.add(0);
+                errors.push({ type: 'sequence', index: 0, msg: 'Secuencia base vacía.' });
             }
 
-            sequences.forEach((seq, idx) => {
-                if (seq.length === 0) {
-                    sequenceErrors.add(idx);
-                    errors.push({ type: 'sequence', index: idx, msg: `Secuencia ${idx + 1}: vacía.` });
-                    return;
+            sequence.forEach((id) => {
+                if (!Number.isFinite(id) || id < 1 || id > stations.length) {
+                    sequenceErrors.add(0);
+                    errors.push({ type: 'sequence', index: 0, msg: `Secuencia base: ID fuera de rango (1–${stations.length}).` });
                 }
-                seq.forEach((id) => {
-                    if (!Number.isFinite(id) || id < 1 || id > stations.length) {
-                        sequenceErrors.add(idx);
-                        errors.push({ type: 'sequence', index: idx, msg: `Secuencia ${idx + 1}: ID fuera de rango (1–${stations.length}).` });
-                    }
-                });
             });
 
-            return { errors, stationErrors, sequenceErrors };
+            const expanded = getExpandedSequences();
+            if (expanded.length > MAX_SEQS) {
+                errors.push({ type: 'general', msg: `Demasiadas secuencias generadas (${expanded.length}). Máximo permitido: ${MAX_SEQS}.` });
+            }
+
+            return { errors, stationErrors, stationMissingTag, sequenceErrors };
         }
 
         function formatValidationErrors(errors) {
-            if (errors.length === 0) return '';
+            const visibleErrors = errors.filter(err => !(err.type === 'station' && err.code === 'missing-physical'));
+            if (visibleErrors.length === 0) return '';
             const grouped = { station: [], sequence: [], general: [] };
-            errors.forEach(err => grouped[err.type || 'general'].push(err.msg));
+            visibleErrors.forEach(err => grouped[err.type || 'general'].push(err.msg));
             
             let html = '<div style="display: grid; gap: 6px;">';
             if (grouped.general.length > 0) {
@@ -685,27 +1069,24 @@
 
         function renderStations() {
             stationsEl.innerHTML = '';
-            if (activeSequenceIndex < 0 || !sequences[activeSequenceIndex]) {
-                stationsEl.innerHTML = '<p class="note">Seleccioná una secuencia para ver sus estaciones.</p>';
-                updatePayloads();
-                return;
-            }
-
-            const seq = sequences[activeSequenceIndex];
-            if (seq.length === 0) {
+            if (sequence.length === 0) {
                 stationsEl.innerHTML = '<p class="note">Secuencia vacía. Agregá estaciones desde “Agregar estación”.</p>';
+                renderGroups();
                 updatePayloads();
                 return;
             }
 
             const validation = validateStationsAndSequences();
 
-            seq.forEach((logicalId, seqIndex) => {
+            sequence.forEach((logicalId, seqIndex) => {
                 const idx = logicalId - 1;
                 if (!stations[idx]) {
-                    stations[idx] = { name: `Estación ${logicalId}`, physicalId: null };
+                    stations[idx] = { name: `Estación ${logicalId}`, physicalId: null, group: '' };
                 }
                 const station = stations[idx];
+                if (station.group === undefined) {
+                    station.group = '';
+                }
                 const card = document.createElement('div');
                 card.className = 'station-card';
                 if (validation.stationErrors.has(idx)) {
@@ -715,9 +1096,11 @@
                 const row = document.createElement('div');
                 row.className = 'station-row';
 
-                const index = document.createElement('div');
-                index.className = 'station-index';
-                index.textContent = logicalId;
+                const dragHandle = document.createElement('span');
+                dragHandle.className = 'drag-handle';
+                dragHandle.setAttribute('draggable', 'true');
+                dragHandle.setAttribute('title', 'Arrastrar para reordenar');
+                dragHandle.textContent = '⋮⋮';
 
                 const nameField = document.createElement('div');
                 nameField.className = 'field';
@@ -734,18 +1117,38 @@
                 statusChip.className = 'chip';
                 statusChip.textContent = Number.isFinite(station.physicalId) ? `Tag ${station.physicalId}` : 'Sin tag';
 
-                row.appendChild(index);
+                row.appendChild(dragHandle);
                 row.appendChild(nameField);
                 row.appendChild(statusChip);
 
                 const tagRow = document.createElement('div');
                 tagRow.className = 'tag-row';
 
+                const groupField = document.createElement('div');
+                groupField.className = 'field';
+                groupField.innerHTML = '<label>Intercambiable</label>';
+                const groupSelect = document.createElement('select');
+                GROUP_OPTIONS.forEach(optionValue => {
+                    const option = document.createElement('option');
+                    option.value = optionValue;
+                    option.textContent = optionValue ? `Grupo ${optionValue}` : 'Sin intercambio';
+                    groupSelect.appendChild(option);
+                });
+                groupSelect.value = station.group || '';
+                groupSelect.addEventListener('change', (e) => {
+                    station.group = e.target.value || '';
+                    renderRoute();
+                    renderGroups();
+                    updatePayloads();
+                });
+                groupField.appendChild(groupSelect);
+
                 const readBtn = document.createElement('button');
                 readBtn.className = 'btn-primary';
                 readBtn.textContent = 'Leer tag';
                 readBtn.onclick = () => openTagReader(idx);
 
+                tagRow.appendChild(groupField);
                 tagRow.appendChild(readBtn);
 
                 const actions = document.createElement('div');
@@ -757,27 +1160,27 @@
                 upBtn.disabled = seqIndex === 0;
                 upBtn.onclick = () => {
                     if (seqIndex === 0) return;
-                    const tmp = seq[seqIndex - 1];
-                    seq[seqIndex - 1] = seq[seqIndex];
-                    seq[seqIndex] = tmp;
+                    const tmp = sequence[seqIndex - 1];
+                    sequence[seqIndex - 1] = sequence[seqIndex];
+                    sequence[seqIndex] = tmp;
                     renderStations();
                     renderRoute();
-                    renderSequences();
+                    renderGroups();
                     updatePayloads();
                 };
 
                 const downBtn = document.createElement('button');
                 downBtn.className = 'btn-secondary';
                 downBtn.textContent = 'Bajar';
-                downBtn.disabled = seqIndex === seq.length - 1;
+                downBtn.disabled = seqIndex === sequence.length - 1;
                 downBtn.onclick = () => {
-                    if (seqIndex === seq.length - 1) return;
-                    const tmp = seq[seqIndex + 1];
-                    seq[seqIndex + 1] = seq[seqIndex];
-                    seq[seqIndex] = tmp;
+                    if (seqIndex === sequence.length - 1) return;
+                    const tmp = sequence[seqIndex + 1];
+                    sequence[seqIndex + 1] = sequence[seqIndex];
+                    sequence[seqIndex] = tmp;
                     renderStations();
                     renderRoute();
-                    renderSequences();
+                    renderGroups();
                     updatePayloads();
                 };
 
@@ -785,125 +1188,232 @@
                 removeBtn.className = 'btn-danger';
                 removeBtn.textContent = 'Eliminar';
                 removeBtn.onclick = () => {
-                    seq.splice(seqIndex, 1);
+                    sequence.splice(seqIndex, 1);
                     renderStations();
                     renderRoute();
-                    renderSequences();
+                    renderGroups();
                     updatePayloads();
                 };
 
                 actions.appendChild(upBtn);
                 actions.appendChild(downBtn);
                 actions.appendChild(removeBtn);
+                if (validation.stationMissingTag.has(idx)) {
+                    const inlineError = document.createElement('span');
+                    inlineError.className = 'station-error-inline';
+                    inlineError.textContent = 'Falta tag físico.';
+                    actions.appendChild(inlineError);
+                }
 
                 card.appendChild(row);
                 card.appendChild(tagRow);
                 card.appendChild(actions);
                 stationsEl.appendChild(card);
+
+                card.dataset.seqIndex = String(seqIndex);
+                dragHandle.addEventListener('dragstart', (e) => {
+                    draggedSeqIndex = seqIndex;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(seqIndex));
+                    card.classList.add('dragging');
+                });
+                dragHandle.addEventListener('dragend', () => {
+                    draggedSeqIndex = null;
+                    card.classList.remove('dragging');
+                    if (dragOverCard) {
+                        dragOverCard.classList.remove('drag-over');
+                        dragOverCard = null;
+                    }
+                });
             });
 
             renderRoute();
-            renderSequences();
+            renderGroups();
             updatePayloads();
         }
 
         function renderRoute() {
             routePreviewEl.innerHTML = '';
-            const seq = (activeSequenceIndex >= 0 && sequences[activeSequenceIndex]) ? sequences[activeSequenceIndex] : null;
-            if (!seq && stations.length === 0) {
+            if (sequence.length === 0) {
                 routePreviewEl.innerHTML = '<span class="note">Sin ruta</span>';
                 return;
             }
-            if (seq) {
-                seq.forEach((logicalId) => {
-                    const chip = document.createElement('span');
-                    chip.className = 'chip';
-                    const station = stations[logicalId - 1];
-                    const name = station ? station.name || `Estación ${logicalId}` : `Estación ${logicalId}`;
-                    chip.textContent = `${logicalId}: ${name}`;
-                    routePreviewEl.appendChild(chip);
-                });
-            } else {
-                stations.forEach((station, idx) => {
-                    const chip = document.createElement('span');
-                    chip.className = 'chip';
-                    chip.textContent = `${idx + 1}: ${station.name || `Estación ${idx + 1}`}`;
-                    routePreviewEl.appendChild(chip);
-                });
-            }
+            sequence.forEach((logicalId) => {
+                const chip = document.createElement('span');
+                chip.className = 'chip';
+                const station = stations[logicalId - 1];
+                const name = station ? station.name || `Estación ${logicalId}` : `Estación ${logicalId}`;
+                const groupLabel = station && station.group ? ` (Grupo ${station.group})` : '';
+                chip.textContent = `${logicalId}: ${name}${groupLabel}`;
+                routePreviewEl.appendChild(chip);
+            });
+            renderGroups();
         }
 
-        function renderSequences() {
-            sequenceListEl.innerHTML = '';
+        function renderGroups() {
+            groupListEl.innerHTML = '';
 
-            if (sequences.length === 0) {
-                activeSequenceIndex = -1;
-                sequenceListEl.innerHTML = '<span class="note">Creá una secuencia para empezar.</span>';
+            const groupMap = new Map();
+            sequence.forEach((logicalId) => {
+                const station = stations[logicalId - 1];
+                if (!station || !station.group) return;
+                const label = station.group.trim();
+                if (!label) return;
+                if (!groupMap.has(label)) {
+                    groupMap.set(label, []);
+                }
+                groupMap.get(label).push(station.name || `Estación ${logicalId}`);
+            });
+
+            if (groupMap.size === 0) {
+                groupListEl.innerHTML = '<span class="note">No hay estaciones intercambiables definidas.</span>';
                 return;
             }
 
-            if (activeSequenceIndex < 0 || activeSequenceIndex >= sequences.length) {
-                activeSequenceIndex = 0;
-            }
-
-            const validation = validateStationsAndSequences();
-
-            sequences.forEach((seq, idx) => {
+            [...groupMap.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([label, names]) => {
                 const card = document.createElement('div');
                 card.className = 'sequence-card';
-                if (validation.sequenceErrors.has(idx)) {
-                    card.classList.add('error');
-                }
+
                 const header = document.createElement('div');
                 header.className = 'sequence-header';
                 const title = document.createElement('strong');
-                title.textContent = `Secuencia ${idx + 1}`;
+                title.textContent = `Grupo ${label}`;
                 header.appendChild(title);
-
-                const actions = document.createElement('div');
-                actions.className = 'sequence-actions';
-                const selectBtn = document.createElement('button');
-                selectBtn.className = idx === activeSequenceIndex ? 'btn-primary' : 'btn-secondary';
-                selectBtn.textContent = idx === activeSequenceIndex ? 'Seleccionada' : 'Seleccionar';
-                selectBtn.onclick = () => {
-                    activeSequenceIndex = idx;
-                    renderSequences();
-                    renderStations();
-                };
-                actions.appendChild(selectBtn);
-                header.appendChild(actions);
+                card.appendChild(header);
 
                 const chips = document.createElement('div');
                 chips.className = 'route-preview';
-                seq.forEach((logicalId) => {
+                names.forEach(name => {
                     const chip = document.createElement('span');
                     chip.className = 'chip';
-                    const station = stations[logicalId - 1];
-                    const name = station ? station.name || `Estación ${logicalId}` : `Estación ${logicalId}`;
-                    const tagLabel = station && Number.isFinite(station.physicalId) ? `Tag ${station.physicalId}` : 'Sin tag';
-                    chip.textContent = `${tagLabel}: ${name}`;
+                    chip.textContent = name;
                     chips.appendChild(chip);
                 });
-                card.appendChild(header);
                 card.appendChild(chips);
-                sequenceListEl.appendChild(card);
+                groupListEl.appendChild(card);
+            });
+        }
+
+        function renderAllSequencesModal() {
+            sequenceModalContent.innerHTML = '';
+
+            if (sequence.length === 0) {
+                sequenceModalContent.innerHTML = '<span class="note">No hay secuencias para mostrar.</span>';
+                return;
+            }
+
+            const seqs = getExpandedSequences();
+            const meta = document.createElement('div');
+            meta.className = 'sequence-modal-meta';
+            const count = document.createElement('span');
+            count.className = 'note';
+            count.textContent = `Total: ${seqs.length} secuencia${seqs.length === 1 ? '' : 's'}.`;
+            meta.appendChild(count);
+            sequenceModalContent.appendChild(meta);
+
+            if (seqs.length === 0) {
+                sequenceModalContent.innerHTML = '<span class="note">No hay combinaciones generadas.</span>';
+                return;
+            }
+
+            const list = document.createElement('div');
+            list.className = 'sequence-modal-list';
+
+            seqs.forEach((seq, idx) => {
+                const row = document.createElement('div');
+                row.className = 'sequence-variant';
+
+                const badge = document.createElement('div');
+                badge.className = 'seq-badge';
+                badge.textContent = `#${idx + 1}`;
+                row.appendChild(badge);
+
+                const flow = document.createElement('div');
+                flow.className = 'sequence-flow';
+
+                seq.forEach((logicalId, pos) => {
+                    const node = document.createElement('div');
+                    node.className = 'sequence-node';
+                    const station = stations[logicalId - 1];
+                    node.textContent = station ? (station.name || `Estación ${logicalId}`) : `Estación ${logicalId}`;
+                    flow.appendChild(node);
+                    if (pos < seq.length - 1) {
+                        const arrow = document.createElement('span');
+                        arrow.className = 'seq-arrow';
+                        arrow.innerHTML = '&rarr;';
+                        flow.appendChild(arrow);
+                    }
+                });
+
+                row.appendChild(flow);
+                list.appendChild(row);
             });
 
-            renderRoute();
+            sequenceModalContent.appendChild(list);
+        }
+
+        function openSequenceModal() {
+            renderAllSequencesModal();
+            sequenceModal.classList.add('open');
+            sequenceModal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeSequenceModal() {
+            sequenceModal.classList.remove('open');
+            sequenceModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function handleStationDragOver(event) {
+            const card = event.target.closest('.station-card');
+            if (!card) return;
+            event.preventDefault();
+            if (dragOverCard && dragOverCard !== card) {
+                dragOverCard.classList.remove('drag-over');
+            }
+            dragOverCard = card;
+            dragOverCard.classList.add('drag-over');
+        }
+
+        function handleStationDrop(event) {
+            const card = event.target.closest('.station-card');
+            if (!card) return;
+            event.preventDefault();
+            const from = draggedSeqIndex ?? Number(event.dataTransfer.getData('text/plain'));
+            const to = Number(card.dataset.seqIndex);
+            if (!Number.isFinite(from) || !Number.isFinite(to)) return;
+            if (from === to) {
+                if (dragOverCard) {
+                    dragOverCard.classList.remove('drag-over');
+                    dragOverCard = null;
+                }
+                return;
+            }
+            const [moved] = sequence.splice(from, 1);
+            sequence.splice(to, 0, moved);
+            if (dragOverCard) {
+                dragOverCard.classList.remove('drag-over');
+                dragOverCard = null;
+            }
+            renderStations();
         }
 
         function updatePayloads() {
             const validation = validateStationsAndSequences();
             if (validation.errors.length > 0) {
-                validationErrorsEl.innerHTML = formatValidationErrors(validation.errors);
-                validationErrorsEl.classList.add('show');
+                const validationHtml = formatValidationErrors(validation.errors);
+                validationErrorsEl.innerHTML = validationHtml;
+                if (validationHtml) {
+                    validationErrorsEl.classList.add('show');
+                } else {
+                    validationErrorsEl.classList.remove('show');
+                }
                 seqPayloadEl.textContent = '[]';
                 return;
             }
             validationErrorsEl.innerHTML = '';
             validationErrorsEl.classList.remove('show');
 
-            const seqsToSend = sequences.length > 0 ? sequences : (stations.length > 0 ? [stations.map((_, i) => i + 1)] : []);
+            const seqsToSend = getExpandedSequences();
             if (seqsToSend.length === 0) {
                 seqPayloadEl.textContent = '[]';
             } else {
@@ -1081,7 +1591,7 @@
             loadAllBtn.disabled = true;
             startMonitorBtn.disabled = true;
             stopMonitorBtn.disabled = true;
-            connectBtn.textContent = 'Conectar ESP32';
+            connectBtn.textContent = 'Conectarse con robotito';
         }
 
         async function disconnectBLE() {
@@ -1108,12 +1618,16 @@
             const validation = validateStationsAndSequences();
             if (validation.errors.length > 0) {
                 renderStations();
-                renderSequences();
+                renderGroups();
                 alert('Corregí los errores antes de enviar.');
                 return;
             }
 
-            const seqsToSend = sequences.length > 0 ? sequences : [stations.map((_, i) => i + 1)];
+            const seqsToSend = getExpandedSequences();
+            if (seqsToSend.length > MAX_SEQS) {
+                alert(`Se generan ${seqsToSend.length} secuencias. Máximo permitido: ${MAX_SEQS}.`);
+                return;
+            }
             for (const seq of seqsToSend) {
                 for (const id of seq) {
                     if (id < 1 || id > stations.length) {
@@ -1145,6 +1659,7 @@
                     } else {
                         await seqWriteCharacteristic.writeValue(seqBuffer);
                     }
+                    await saveLastSequence();
                     showToast('Secuencias enviadas correctamente', 'success');
                     console.log('[BLE] write seq ok');
                 } catch (seqError) {
@@ -1216,16 +1731,16 @@
                         return physicalToLogical.get(physicalId);
                     }
                     const logicalId = stations.length + 1;
-                    stations.push({ name: `Estación ${logicalId}`, physicalId });
+                    stations.push({ name: `Estación ${logicalId}`, physicalId, group: '' });
                     physicalToLogical.set(physicalId, logicalId);
                     return logicalId;
                 };
 
-                sequences = parsedSequences.map(seq => seq.map(physicalId => ensureStationForPhysical(physicalId)));
-                activeSequenceIndex = sequences.length > 0 ? 0 : -1;
-                renderSequences();
-                renderStations();
-                updatePayloads();
+                sequence = parsedSequences[0].map(physicalId => ensureStationForPhysical(physicalId));
+                stations = stations.map(station => ({ ...station, group: '' }));
+            renderStations();
+            renderGroups();
+            updatePayloads();
             } catch (error) {
                 alert('Error al cargar secuencia: ' + error.message);
             }
@@ -1293,8 +1808,6 @@
             }
 
             detections.forEach(det => {
-                lastDetectedLogical = det.logical_id;
-                lastDetectedEl.textContent = `Tag ${det.logical_id}`;
                 addLogEntry(`Detectado: lógico ${det.logical_id}`);
             });
         }
@@ -1303,9 +1816,18 @@
             stableTagId = null;
             stableStart = null;
             lastDetectionAt = null;
+            tagProgressValue = 0;
             tagReaderProgressBar.style.width = '0%';
             tagReaderProgressText.textContent = message;
             tagReaderStatus.textContent = '';
+        }
+
+        function setTagReaderProgress(percent) {
+            const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+            if (clamped === tagProgressValue) return;
+            tagProgressValue = clamped;
+            tagReaderProgressBar.style.width = `${clamped}%`;
+            tagReaderProgressText.textContent = `Estable: ${clamped}%`;
         }
 
         function openTagReader(stationIndex) {
@@ -1333,8 +1855,7 @@
                 }
                 if (stableStart) {
                     const progress = Math.min((now - stableStart) / 5000, 1);
-                    tagReaderProgressBar.style.width = `${Math.round(progress * 100)}%`;
-                    tagReaderProgressText.textContent = `Estable: ${Math.round(progress * 100)}%`;
+                    setTagReaderProgress(progress * 100);
                 }
             }, 150);
         }
@@ -1363,29 +1884,49 @@
                 return;
             }
             tagReaderLocked = true;
-            stations[activeTagStationIndex].physicalId = tagId;
-            renderStations();
-            renderRoute();
-            renderSequences();
-            updatePayloads();
-            tagReaderProgressBar.style.width = '100%';
-            tagReaderProgressText.textContent = 'Estable: 100%';
-            tagReaderStatus.textContent = '✅ Tag asignado correctamente';
-            setTimeout(() => {
-                closeTagReader();
-            }, 900);
+            try {
+                const station = stations[activeTagStationIndex];
+                if (station) {
+                    station.physicalId = tagId;
+                }
+                renderStations();
+                renderRoute();
+                renderGroups();
+                updatePayloads();
+                setTagReaderProgress(100);
+                tagReaderStatus.textContent = '✅ Tag asignado correctamente';
+            } finally {
+                setTimeout(() => {
+                    closeTagReader();
+                }, 150);
+            }
         }
 
         function handleTagReaderMessage(event) {
             if (!tagReaderOpen || tagReaderLocked) return;
             const data = event.data;
-            if (!data || data.type !== 'apriltag-detected') return;
+            if (!data || !data.type) return;
+            if (data.type === 'apriltag-error') {
+                if (data.code === 'multiple-ids') {
+                    stableTagId = null;
+                    stableStart = null;
+                    lastDetectionAt = Date.now();
+                    setTagReaderProgress(0);
+                    tagReaderStatus.classList.add('error');
+                    const ids = Array.isArray(data.ids) ? data.ids.join(', ') : '';
+                    tagReaderStatus.textContent = ids
+                        ? `⚠ Se detectaron varios tags distintos: ${ids}. Mostrá solo uno.`
+                        : '⚠ Se detectaron varios tags distintos. Mostrá solo uno.';
+                }
+                return;
+            }
+            if (data.type !== 'apriltag-detected') return;
             const tagId = Number(data.id);
             if (!Number.isFinite(tagId)) return;
 
             // Verificar si es un tag reservado
             if (RESERVED_TAGS.has(tagId)) {
-                tagReaderProgressBar.style.width = '0%';
+                setTagReaderProgress(0);
                 tagReaderProgressText.textContent = 'Tag reservado. Probá con otro.';
                 tagReaderStatus.textContent = '⚠ Los tags 1, 2, 3 y 4 están reservados para control.';
                 tagReaderStatus.classList.add('error');
@@ -1405,8 +1946,7 @@
 
             const elapsed = now - (stableStart || now);
             const progress = Math.min(elapsed / 5000, 1);
-            tagReaderProgressBar.style.width = `${Math.round(progress * 100)}%`;
-            tagReaderProgressText.textContent = `Estable: ${Math.round(progress * 100)}%`;
+            setTagReaderProgress(progress * 100);
             tagReaderStatus.classList.remove('error');
             tagReaderStatus.textContent = 'Detectando tag...';
 
@@ -1418,7 +1958,7 @@
         connectBtn.addEventListener('click', () => {
             if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
                 disconnectBLE();
-                connectBtn.textContent = 'Conectar ESP32';
+                connectBtn.textContent = 'Conectarse con robotito';
             } else {
                 connectBLE();
             }
@@ -1428,52 +1968,23 @@
         loadAllBtn.addEventListener('click', loadAllFromESP32);
         startMonitorBtn.addEventListener('click', startMonitoring);
         stopMonitorBtn.addEventListener('click', stopMonitoring);
+        stationsEl.addEventListener('dragover', handleStationDragOver);
+        stationsEl.addEventListener('drop', handleStationDrop);
 
         addStationBtn.addEventListener('click', () => {
-            if (activeSequenceIndex < 0 || !sequences[activeSequenceIndex]) {
-                alert('Creá o seleccioná una secuencia primero');
-                return;
-            }
             const logicalId = stations.length + 1;
             const name = stationNameInput.value.trim() || `Estación ${logicalId}`;
-            stations.push({ name, physicalId: null });
-            sequences[activeSequenceIndex].push(logicalId);
+            stations.push({ name, physicalId: null, group: '' });
+            sequence.push(logicalId);
             stationNameInput.value = '';
             renderStations();
-        });
-
-        addSequenceBtn.addEventListener('click', () => {
-            sequences.push([]);
-            activeSequenceIndex = sequences.length - 1;
-            renderSequences();
-            renderStations();
-            updatePayloads();
-        });
-
-        deleteSequenceBtn.addEventListener('click', () => {
-            if (activeSequenceIndex < 0) {
-                return;
-            }
-            if (!confirm('¿Eliminar la secuencia seleccionada?')) {
-                return;
-            }
-            sequences.splice(activeSequenceIndex, 1);
-            if (sequences.length === 0) {
-                activeSequenceIndex = -1;
-            } else if (activeSequenceIndex >= sequences.length) {
-                activeSequenceIndex = sequences.length - 1;
-            }
-            renderSequences();
-            renderStations();
-            updatePayloads();
         });
 
         if (clearStationsBtn) {
             clearStationsBtn.addEventListener('click', () => {
                 if (confirm('¿Limpiar todas las estaciones?')) {
                     stations = [];
-                    sequences = [];
-                    activeSequenceIndex = -1;
+                    sequence = [];
                     renderStations();
                 }
             });
@@ -1487,12 +1998,35 @@
         loadAllBtn.disabled = true;
         startMonitorBtn.disabled = true;
         stopMonitorBtn.disabled = true;
-        renderStations();
+        applyDebugMode();
+        // loadLastSequence(); // disabled: do not auto-load persisted state
+
+        showSequencesBtn.addEventListener('click', openSequenceModal);
+        closeSequencesBtn.addEventListener('click', closeSequenceModal);
+        sequenceModal.addEventListener('click', (e) => {
+            if (e.target === sequenceModal) {
+                closeSequenceModal();
+            }
+        });
 
         closeTagReaderBtn.addEventListener('click', closeTagReader);
         tagReaderPopover.addEventListener('click', (e) => {
             if (e.target === tagReaderPopover) {
                 closeTagReader();
+            }
+        });
+        showStartTagBtn.addEventListener('click', () => {
+            startTagModal.classList.add('open');
+            startTagModal.setAttribute('aria-hidden', 'false');
+        });
+        closeStartTagBtn.addEventListener('click', () => {
+            startTagModal.classList.remove('open');
+            startTagModal.setAttribute('aria-hidden', 'true');
+        });
+        startTagModal.addEventListener('click', (e) => {
+            if (e.target === startTagModal) {
+                startTagModal.classList.remove('open');
+                startTagModal.setAttribute('aria-hidden', 'true');
             }
         });
         window.addEventListener('message', handleTagReaderMessage);
