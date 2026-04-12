@@ -195,10 +195,21 @@ for i = 1, TEST_DURATION / 5 do
         '| bytes:', total_bytes,
         '| lineas:', total_lines,
         '| paquetes:', total_packets)
+  
+  -- Mostrar pares guardados (opcional)
   -- local saved_pairs = rble.mapper_get_pairs()
-  -- for i, pair in ipairs(saved_pairs) do
-  --     print(string.format("  par %d: physical=%d -> logical=%d", i, pair[1], pair[2]))
+  -- for j, pair in ipairs(saved_pairs) do
+  --     print(string.format("  par %d: physical=%d -> logical=%d", j, pair[1], pair[2]))
   -- end
+  
+  -- Mostrar secuencias guardadas para verificar carga
+  local saved_seq = rble.mapper_get_sequence()
+  if #saved_seq > 0 then
+    local seq_str = table.concat(saved_seq, ", ")
+    print('bt_scan_test.lua', 'Secuencia guardada:', seq_str)
+  else
+    print('bt_scan_test.lua', 'Sin secuencia guardada')
+  end
 end
 
 -- --------------------------------------------------------------------------
