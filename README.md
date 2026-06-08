@@ -67,7 +67,7 @@ tagaprilscanner/
 **Características**:
 - Gestión de estaciones con nombres personalizados
 - Múltiples secuencias de recorrido
-- Validación de IDs (reservados: 1, 2, 3, 4)
+- Validación de IDs (reservados: 1, 2, 3, 4, 5)
 - Monitor de detecciones en tiempo real
 - Lectura de tags vía cámara integrada
 - Persistencia en NVS del ESP32
@@ -81,7 +81,7 @@ tagaprilscanner/
 6. **Enviar**: Click en "Enviar Mapa + Secuencias"
 
 **Tags Reservados**:
-- `1-4`: Reservados para control del sistema
+- `1-5`: Reservados para control del sistema
 
 ---
 
@@ -274,7 +274,7 @@ Donde:
 | Secuencias | 10 | `HUSKYLENS_SEQ_MAX_SEQS` |
 | IDs por secuencia | 50 | `HUSKYLENS_SEQ_MAX` |
 | Rango de IDs | 0-255 | 1 byte por ID |
-| Tags reservados | 1-4 | Control del sistema |
+| Tags reservados | 1-5 | Control del sistema |
 | MTU BLE | 23 bytes | Paquete mínimo garantizado |
 
 ---

@@ -387,7 +387,7 @@
     <div class="container">
         <div class="card hero">
             <h1>AprilTag Map Builder</h1>
-            <p>Creá el mapeo físico → lógico. Los IDs lógicos de control (1–4) no son editables.</p>
+            <p>Creá el mapeo físico → lógico. Los IDs lógicos de control (1–5) no son editables.</p>
             <div class="status disconnected" id="status">● Desconectado</div>
         </div>
 
@@ -444,8 +444,8 @@
     </div>
 
     <script>
-        const RESERVED_LOGICAL = new Set([1, 2, 3, 4]);
-        const RESERVED_TAGS = new Set([1, 2, 3, 4]);
+        const RESERVED_LOGICAL = new Set([1, 2, 3, 4, 5, 6]);
+        const RESERVED_TAGS = new Set([1, 2, 3, 4, 5, 6]);
 
         let bleDevice = null;
         let bleServer = null;
@@ -913,6 +913,14 @@
             tagReaderProgressBar.style.width = '0%';
             tagReaderProgressText.textContent = message;
             tagReaderStatus.textContent = '';
+            tagReaderStatus.classList.remove('error');
+        }
+
+        function showTagReaderError(progressMessage, statusMessage) {
+            tagReaderProgressBar.style.width = '0%';
+            tagReaderProgressText.textContent = progressMessage;
+            tagReaderStatus.textContent = statusMessage;
+            tagReaderStatus.classList.add('error');
         }
 
         function openTagReader(index) {
@@ -978,6 +986,16 @@
             if (activeReadIndex === null || activeReadIndex === undefined) {
                 return;
             }
+
+            const duplicateIndex = mappings.findIndex((entry, idx) => idx !== activeReadIndex && entry.physical === tagId);
+            if (duplicateIndex !== -1) {
+                showTagReaderError(
+                    'Tag ya agregado. Probá con otro.',
+                    `⚠ El tag ${tagId} ya fue leído y agregado en la fila ${duplicateIndex + 1}.`
+                );
+                return;
+            }
+
             tagReaderLocked = true;
             mappings[activeReadIndex].physical = tagId;
             renderMappings();
@@ -992,18 +1010,40 @@
         function handleTagReaderMessage(event) {
             if (!tagReaderOpen || tagReaderLocked) return;
             const data = event.data;
-            if (!data || data.type !== 'apriltag-detected') return;
+            if (!data) return;
+
+            if (data.type === 'apriltag-error' && data.code === 'multiple-ids') {
+                stableTagId = null;
+                stableStart = null;
+                showTagReaderError(
+                    'Muchos tags en pantalla. Mostrá solo uno.',
+                    '⚠ Se detectaron múltiples tags al mismo tiempo.'
+                );
+                return;
+            }
+
+            if (data.type !== 'apriltag-detected') return;
             const tagId = Number(data.id);
             if (!Number.isFinite(tagId)) return;
 
             // Verificar si es un tag reservado - esto debe ser ANTES de cualquier progreso
             if (RESERVED_TAGS.has(tagId)) {
-                tagReaderProgressBar.style.width = '0%';
-                tagReaderProgressText.textContent = 'Tag reservado. Probá con otro.';
-                tagReaderStatus.textContent = '⚠ Los tags 1, 2, 3 y 4 están reservados para control.';
-                tagReaderStatus.classList.add('error');
+                showTagReaderError(
+                    'Tag reservado para control. Probá con otro.',
+                );
                 stableTagId = tagId;  // Marcar como visto para no reintentar
                 stableStart = null;    // Asegurar que no hay progreso
+                return;
+            }
+
+            const duplicateIndex = mappings.findIndex((entry, idx) => idx !== activeReadIndex && entry.physical === tagId);
+            if (duplicateIndex !== -1) {
+                showTagReaderError(
+                    'Tag ya agregado. Probá con otro.',
+                    `⚠ El tag ${tagId} ya fue leído y agregado en la fila ${duplicateIndex + 1}.`
+                );
+                stableTagId = tagId;
+                stableStart = null;
                 return;
             }
 

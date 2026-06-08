@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "activities": [
+    {
+      "id": "crecimiento-arbol",
+      "name": "Crecimiento de un árbol",
+      "description": "Secuencia de etapas del crecimiento de un árbol.",
+      "tags": [
+        { "physicalId": 7, "alias": "Semilla", "interchangeableWith": [] },
+        { "physicalId": 8, "alias": "Planta chica", "interchangeableWith": [] },
+        { "physicalId": 9, "alias": "Árbol sin fruta", "interchangeableWith": [] },
+        { "physicalId": 10, "alias": "Árbol con frutas", "interchangeableWith": [] }
+      ],
+      "sequences": [[7, 8, 9, 10]]
+    },
+    {
+      "id": "lavado-manos",
+      "name": "Lavado de manos",
+      "description": "Pasos principales de higiene de manos.",
+      "tags": [
+        { "physicalId": 7, "alias": "Mojar", "interchangeableWith": [] },
+        { "physicalId": 8, "alias": "Enjabonar", "interchangeableWith": [] },
+        { "physicalId": 9, "alias": "Enjuagar", "interchangeableWith": [] },
+        { "physicalId": 10, "alias": "Secar", "interchangeableWith": [] }
+      ],
+      "sequences": [[7, 8, 9, 10]]
+    },
+    {
+      "id": "palabra-casa",
+      "name": "Formar la palabra CASA",
+      "description": "Recorrido para construir la palabra CASA en orden.",
+      "tags": [
+        { "physicalId": 7, "alias": "C", "interchangeableWith": [] },
+        { "physicalId": 8, "alias": "A", "interchangeableWith": [10] },
+        { "physicalId": 9, "alias": "S", "interchangeableWith": [] },
+        { "physicalId": 10, "alias": "A", "interchangeableWith": [8] }
+      ],
+      "sequences": [[7, 8, 9, 10]]
+    },
+  {
+    "id": "cepillado-dientes",
+    "name": "Cepillado de dientes",
+    "description": "Pasos para cepillarse los dientes correctamente.",
+    "tags": [
+      { "physicalId": 7, "alias": "Mojar el cepillo", "interchangeableWith": [] },
+      { "physicalId": 8, "alias": "Poner pasta", "interchangeableWith": [] },
+      { "physicalId": 9, "alias": "Cepillar", "interchangeableWith": [] },
+      { "physicalId": 10, "alias": "Enjuagar", "interchangeableWith": [] }
+    ],
+    "sequences": [[7, 8, 9, 10]]
+  },
+    {
+      "id": "hacer-jugo",
+      "name": "Hacer un vaso de jugo",
+      "description": "Pasos para preparar jugo de fruta exprimida.",
+      "tags": [
+        { "physicalId": 7, "alias": "Lavar la fruta", "interchangeableWith": [] },
+        { "physicalId": 8, "alias": "Cortar la fruta", "interchangeableWith": [] },
+        { "physicalId": 9, "alias": "Exprimir", "interchangeableWith": [] },
+        { "physicalId": 10, "alias": "Servir en vaso", "interchangeableWith": [] }
+      ],
+      "sequences": [[7, 8, 9, 10]]
+    },
+    {
+      "id": "palabra-pato",
+      "name": "Formar la palabra PATO",
+      "description": "Construir la palabra PATO con letras en orden.",
+      "tags": [
+        { "physicalId": 7, "alias": "P", "interchangeableWith": [] },
+        { "physicalId": 8, "alias": "A", "interchangeableWith": [] },
+        { "physicalId": 9, "alias": "T", "interchangeableWith": [] },
+        { "physicalId": 10, "alias": "O", "interchangeableWith": [] }
+      ],
+      "sequences": [[7, 8, 9, 10]]
+    }
+  ]
+}

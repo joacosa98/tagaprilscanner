@@ -100,6 +100,65 @@
             align-items: center;
         }
 
+        .site-nav {
+            max-width: 1100px;
+            margin: 0 auto 14px;
+            display: flex;
+            justify-content: flex-start;
+            position: relative;
+            z-index: 40;
+        }
+
+        .menu-btn {
+            background: #ffffff;
+            color: var(--ink);
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            box-shadow: 0 8px 20px rgba(2, 6, 23, 0.08);
+            border-radius: 12px;
+            width: 46px;
+            height: 42px;
+            font-size: 20px;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .menu-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 210px;
+            background: #ffffff;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 12px;
+            box-shadow: 0 20px 36px rgba(2, 6, 23, 0.16);
+            padding: 8px;
+            display: grid;
+            gap: 4px;
+        }
+
+        .menu-panel[hidden] {
+            display: none !important;
+        }
+
+        .menu-link {
+            display: block;
+            text-decoration: none;
+            color: var(--ink);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .menu-link:hover {
+            background: #eef2ff;
+        }
+
+        .menu-link.active {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
         button {
             padding: 10px 18px;
             border: none;
@@ -665,6 +724,20 @@
         }
 
         @media (max-width: 768px) {
+            .site-nav {
+                margin: 0 0 10px;
+            }
+
+            .menu-btn {
+                width: 42px;
+                height: 38px;
+                font-size: 18px;
+            }
+
+            .menu-panel {
+                min-width: min(220px, calc(100vw - 56px));
+            }
+
             .popover {
                 padding: 12px;
                 align-items: center;
@@ -707,6 +780,13 @@
     </style>
 </head>
 <body>
+    <div class="site-nav" id="siteNavWrap">
+        <button class="menu-btn" id="menuToggleBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="mainMenu">☰</button>
+        <nav class="menu-panel" id="mainMenu" hidden>
+            <a class="menu-link active" href="/">Inicio</a>
+            <a class="menu-link" href="/scanner">Scanner de tags</a>
+        </nav>
+    </div>
     <div class="container">
         <div class="card hero">
             <h1>Configurador robotito</h1>
@@ -739,6 +819,16 @@
 
             <div class="card">
                 <h2>Secuencias</h2>
+                <div class="field" style="margin-top: 10px;">
+                    <label>Biblioteca de actividades predefinidas</label>
+                    <div class="sequence-tools">
+                        <select id="activityLibrarySelect" style="min-width: 280px;">
+                            <option value="">Cargando biblioteca...</option>
+                        </select>
+                        <button class="btn-secondary" id="applyActivityBtn" type="button" disabled>Aplicar actividad</button>
+                    </div>
+                    <p class="note" id="activityLibraryNote" style="margin-bottom: 15px;">Al aplicar una actividad se reemplaza el catálogo y las secuencias actuales.</p>
+                </div>
                 <div class="error-box" id="validationErrors"></div>
                 <div style="margin-top: 16px;">
                     <h3 style="font-size: 14px; margin-bottom: 6px;">Estaciones intercambiables</h3>
@@ -804,7 +894,6 @@
             <div class="popover-header">
                 <div>
                     <h3 style="font-size: 18px;">Secuencias definidas</h3>
-                    <p class="note">Listado completo de secuencias a enviar por BLE.</p>
                 </div>
                 <button class="btn-secondary" id="closeSequencesBtn">Cerrar</button>
             </div>
@@ -851,10 +940,24 @@
         let tagReaderLocked = false;
         let tagProgressValue = 0;
         let openInterchangeDropdownId = null;
-        const RESERVED_TAGS = new Set([1, 2, 3, 4]);
+        let activityLibrary = [];
+        const RESERVED_TAGS = new Set([1, 2, 3, 4, 5, 6]);
         const MAX_SEQS = 10;
+        const TAG_COLOR_OPTIONS = [
+            '#d4edbc',
+            '#c6dbe1',
+            '#e6cff2',
+            '#ffcfc9',
+            '#bfe1f6',
+            '#ffe5a0',
+            '#ffdaf0',
+            '#ffd2a6'
+        ];
 
         const statusEl = document.getElementById('status');
+        const siteNavWrap = document.getElementById('siteNavWrap');
+        const menuToggleBtn = document.getElementById('menuToggleBtn');
+        const mainMenu = document.getElementById('mainMenu');
         const connectBtn = document.getElementById('connectBtn');
         const sendAllBtn = document.getElementById('sendAllBtn');
         const loadAllBtn = document.getElementById('loadAllBtn');
@@ -873,6 +976,9 @@
         const sequenceModal = document.getElementById('sequenceModal');
         const closeSequencesBtn = document.getElementById('closeSequencesBtn');
         const sequenceModalContent = document.getElementById('sequenceModalContent');
+        const activityLibrarySelect = document.getElementById('activityLibrarySelect');
+        const applyActivityBtn = document.getElementById('applyActivityBtn');
+        const activityLibraryNote = document.getElementById('activityLibraryNote');
         const showStartTagBtn = document.getElementById('showStartTagBtn');
         const startTagModal = document.getElementById('startTagModal');
         const closeStartTagBtn = document.getElementById('closeStartTagBtn');
@@ -893,6 +999,19 @@
         function updateStatus(state, text) {
             statusEl.className = `status ${state}`;
             statusEl.textContent = text;
+        }
+
+        function closeMainMenu() {
+            if (!mainMenu || !menuToggleBtn) return;
+            mainMenu.hidden = true;
+            menuToggleBtn.setAttribute('aria-expanded', 'false');
+        }
+
+        function toggleMainMenu() {
+            if (!mainMenu || !menuToggleBtn) return;
+            const nextOpen = mainMenu.hidden;
+            mainMenu.hidden = !nextOpen;
+            menuToggleBtn.setAttribute('aria-expanded', String(nextOpen));
         }
 
         function applyDebugMode() {
@@ -917,12 +1036,38 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        function normalizeTagColor(color, fallbackIndex = 0) {
+            if (typeof color === 'string' && TAG_COLOR_OPTIONS.includes(color)) {
+                return color;
+            }
+            const idx = ((fallbackIndex % TAG_COLOR_OPTIONS.length) + TAG_COLOR_OPTIONS.length) % TAG_COLOR_OPTIONS.length;
+            return TAG_COLOR_OPTIONS[idx];
+        }
+
+        function getTagColor(tagId) {
+            const tag = tagCatalog.find((item) => item.physicalId === tagId);
+            if (!tag) return normalizeTagColor(null, Number(tagId) || 0);
+            return normalizeTagColor(tag.color, Number(tagId) || 0);
+        }
+
+        function getNextTagColor() {
+            return normalizeTagColor(null, tagCatalog.length);
+        }
+
+        function applyTagColorStyle(element, tagId) {
+            if (!element) return;
+            element.style.background = getTagColor(tagId);
+            element.style.borderColor = 'rgba(15, 23, 42, 0.18)';
+            element.style.color = '#0f172a';
+        }
+
         function buildPersistedState() {
             return {
                 version: 1,
                 tagCatalog: tagCatalog.map((tag) => ({
                     physicalId: Number.isFinite(tag.physicalId) ? tag.physicalId : null,
                     alias: tag.alias || '',
+                    color: normalizeTagColor(tag.color, Number(tag.physicalId) || 0),
                     interchangeableWith: Array.isArray(tag.interchangeableWith) ? uniqueInOrder(tag.interchangeableWith.map(Number).filter(Number.isFinite)) : []
                 })),
                 sequences: sequences.map((seq) => seq.slice())
@@ -932,9 +1077,10 @@
         function applyPersistedState(data) {
             const loadedCatalog = Array.isArray(data?.tagCatalog) ? data.tagCatalog : [];
             let loaded = loadedCatalog
-                .map((tag) => ({
+                .map((tag, idx) => ({
                     physicalId: Number(tag?.physicalId),
                     alias: typeof tag?.alias === 'string' ? tag.alias : '',
+                    color: normalizeTagColor(tag?.color, idx),
                     interchangeableWith: Array.isArray(tag?.interchangeableWith)
                         ? uniqueInOrder(tag.interchangeableWith.map(Number).filter(Number.isFinite))
                         : []
@@ -970,6 +1116,140 @@
                 .map((seq) => seq.filter((tagId) => catalogSet.has(tagId)))
                 .map((seq) => uniqueInOrder(seq))
                 .filter((seq) => seq.length > 0);
+        }
+
+        function renderActivityLibraryDropdown() {
+            if (!activityLibrarySelect) return;
+            activityLibrarySelect.innerHTML = '';
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = activityLibrary.length > 0
+                ? 'Seleccionar actividad...'
+                : 'No hay actividades disponibles';
+            activityLibrarySelect.appendChild(placeholder);
+
+            activityLibrary.forEach((activity) => {
+                const option = document.createElement('option');
+                option.value = activity.id;
+                option.textContent = activity.name;
+                activityLibrarySelect.appendChild(option);
+            });
+
+            applyActivityBtn.disabled = activityLibrary.length === 0 || !activityLibrarySelect.value;
+        }
+
+        function normalizeActivity(activity) {
+            const rawTags = Array.isArray(activity?.tags) ? activity.tags : [];
+            const tags = rawTags
+                .map((tag, idx) => ({
+                    physicalId: Number(tag?.physicalId),
+                    alias: typeof tag?.alias === 'string' ? tag.alias : '',
+                    color: normalizeTagColor(tag?.color, idx),
+                    interchangeableWith: Array.isArray(tag?.interchangeableWith)
+                        ? uniqueInOrder(tag.interchangeableWith.map(Number).filter(Number.isFinite))
+                        : []
+                }))
+                .filter((tag) => Number.isFinite(tag.physicalId));
+
+            const tagSet = new Set(tags.map((tag) => tag.physicalId));
+            tags.forEach((tag) => {
+                tag.interchangeableWith = tag.interchangeableWith.filter((id) => tagSet.has(id) && id !== tag.physicalId);
+            });
+
+            const sequencesList = Array.isArray(activity?.sequences) ? activity.sequences : [];
+            const normalizedSequences = sequencesList
+                .map((seq) => (Array.isArray(seq) ? seq.map(Number).filter(Number.isFinite) : []))
+                .map((seq) => seq.filter((id) => tagSet.has(id)))
+                .map((seq) => uniqueInOrder(seq))
+                .filter((seq) => seq.length > 0);
+
+            return {
+                id: String(activity?.id || ''),
+                name: String(activity?.name || 'Actividad sin nombre'),
+                description: typeof activity?.description === 'string' ? activity.description : '',
+                tags,
+                sequences: normalizedSequences
+            };
+        }
+
+        function applyActivity(activityId) {
+            const selected = activityLibrary.find((activity) => activity.id === activityId);
+            if (!selected) {
+                showToast('Seleccioná una actividad válida.', 'error');
+                return;
+            }
+
+            const normalized = normalizeActivity(selected);
+            if (normalized.tags.length === 0 || normalized.sequences.length === 0) {
+                showToast('La actividad elegida no tiene datos válidos.', 'error');
+                return;
+            }
+
+            const invalidReserved = normalized.tags.some((tag) => RESERVED_TAGS.has(tag.physicalId));
+            if (invalidReserved) {
+                showToast('La actividad usa tags reservados.', 'error');
+                return;
+            }
+
+            const duplicateIds = new Set();
+            const seen = new Set();
+            normalized.tags.forEach((tag) => {
+                if (seen.has(tag.physicalId)) duplicateIds.add(tag.physicalId);
+                seen.add(tag.physicalId);
+            });
+            if (duplicateIds.size > 0) {
+                showToast('La actividad tiene IDs de tag repetidos.', 'error');
+                return;
+            }
+
+            tagCatalog = normalized.tags.map((tag) => ({
+                physicalId: tag.physicalId,
+                alias: tag.alias,
+                color: normalizeTagColor(tag.color, tag.physicalId),
+                interchangeableWith: tag.interchangeableWith.slice()
+            }));
+            normalizeInterchangeableLinks();
+            sequences = normalized.sequences.map((seq) => seq.slice());
+            openInterchangeDropdownId = null;
+            renderAll();
+
+            if (activityLibraryNote) {
+                const extra = normalized.description ? ` ${normalized.description}` : '';
+                activityLibraryNote.textContent = `Actividad aplicada: ${normalized.name}.${extra}`;
+            }
+            showToast(`Actividad aplicada: ${normalized.name}`, 'success');
+        }
+
+        async function loadActivityLibrary() {
+            if (!activityLibrarySelect) return;
+            try {
+                const response = await fetch('activities-library.json', { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const activities = Array.isArray(payload?.activities) ? payload.activities : [];
+                activityLibrary = activities
+                    .map((activity) => normalizeActivity(activity))
+                    .filter((activity) => activity.id && activity.name && activity.tags.length > 0 && activity.sequences.length > 0);
+
+                renderActivityLibraryDropdown();
+                if (activityLibraryNote) {
+                    activityLibraryNote.textContent = activityLibrary.length > 0
+                        ? 'Seleccioná una actividad para completar automáticamente alias, grupos y secuencias.'
+                        : 'No se encontraron actividades válidas en la biblioteca.';
+                }
+            } catch (error) {
+                console.warn('No se pudo cargar la biblioteca de actividades:', error);
+                activityLibrary = [];
+                renderActivityLibraryDropdown();
+                if (activityLibraryNote) {
+                    activityLibraryNote.textContent = 'No se pudo cargar la biblioteca de actividades.';
+                }
+                showToast('No se pudo cargar la biblioteca de actividades.', 'error');
+            }
         }
 
         async function loadLastSequence() {
@@ -1272,6 +1552,7 @@
             tagCatalog.forEach((tag, idx) => {
                 const card = document.createElement('div');
                 card.className = 'station-card';
+                applyTagColorStyle(card, tag.physicalId);
 
                 const row = document.createElement('div');
                 row.className = 'station-row';
@@ -1280,6 +1561,7 @@
                 const badge = document.createElement('span');
                 badge.className = 'chip';
                 badge.textContent = `ID ${tag.physicalId}`;
+                applyTagColorStyle(badge, tag.physicalId);
                 row.appendChild(label);
                 row.appendChild(badge);
 
@@ -1339,6 +1621,10 @@
                     });
                     const text = document.createElement('span');
                     text.textContent = getTagGroupLabel(candidate.physicalId);
+                    applyTagColorStyle(text, candidate.physicalId);
+                    text.style.display = 'inline-block';
+                    text.style.padding = '2px 8px';
+                    text.style.borderRadius = '999px';
                     option.appendChild(checkbox);
                     option.appendChild(text);
                     menu.appendChild(option);
@@ -1409,6 +1695,7 @@
                     const chip = document.createElement('span');
                     chip.className = 'chip';
                     chip.textContent = getTagGroupLabel(tagId);
+                    applyTagColorStyle(chip, tagId);
                     chips.appendChild(chip);
                 });
                 card.appendChild(chips);
@@ -1455,6 +1742,9 @@
                     const alreadyInSequence = seq.includes(tag.physicalId);
                     addBtn.disabled = alreadyInSequence;
                     addBtn.title = alreadyInSequence ? 'Este tag ya está en la secuencia' : 'Agregar a la secuencia';
+                    if (!alreadyInSequence) {
+                        applyTagColorStyle(addBtn, tag.physicalId);
+                    }
                     addBtn.onclick = () => {
                         if (seq.includes(tag.physicalId)) return;
                         seq.push(tag.physicalId);
@@ -1486,6 +1776,7 @@
                         const node = document.createElement('div');
                         node.className = 'sequence-node';
                         node.textContent = getTagGroupLabel(tagId);
+                        applyTagColorStyle(node, tagId);
                         list.appendChild(node);
                         if (pos < seq.length - 1) {
                             const arrow = document.createElement('span');
@@ -1503,6 +1794,9 @@
                         item.className = 'btn-secondary';
                         item.type = 'button';
                         item.textContent = `${pos + 1}. ${getTagGroupLabel(tagId)}  ×`;
+                        item.style.background = '#ffffff';
+                        item.style.border = `2px solid ${getTagColor(tagId)}`;
+                        item.style.color = '#0f172a';
                         item.title = 'Quitar este tag de la secuencia';
                         item.onclick = () => {
                             seq.splice(pos, 1);
@@ -1553,6 +1847,7 @@
                     const node = document.createElement('div');
                     node.className = 'sequence-node';
                     node.textContent = getTagGroupLabel(tagId);
+                    applyTagColorStyle(node, tagId);
                     flow.appendChild(node);
                     if (pos < seq.length - 1) {
                         const arrow = document.createElement('span');
@@ -1583,7 +1878,12 @@
         function ensureTagInCatalog(tagId) {
             if (!Number.isFinite(tagId)) return;
             if (tagCatalog.some((tag) => tag.physicalId === tagId)) return;
-            tagCatalog.push({ physicalId: tagId, alias: '', interchangeableWith: [] });
+            tagCatalog.push({
+                physicalId: tagId,
+                alias: '',
+                color: normalizeTagColor(null, tagId),
+                interchangeableWith: []
+            });
         }
 
         function updatePayloads() {
@@ -1637,6 +1937,21 @@
             }
             openInterchangeDropdownId = null;
             renderAll();
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!mainMenu || mainMenu.hidden) return;
+            const target = event.target;
+            if (siteNavWrap && target instanceof Element && siteNavWrap.contains(target)) {
+                return;
+            }
+            closeMainMenu();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeMainMenu();
+            }
         });
 
         function formatBuffer(buffer, label) {
@@ -1997,6 +2312,14 @@
             tagReaderProgressBar.style.width = '0%';
             tagReaderProgressText.textContent = message;
             tagReaderStatus.textContent = '';
+            tagReaderStatus.classList.remove('error');
+        }
+
+        function showTagReaderError(progressMessage, statusMessage) {
+            setTagReaderProgress(0);
+            tagReaderProgressText.textContent = progressMessage;
+            tagReaderStatus.textContent = statusMessage;
+            tagReaderStatus.classList.add('error');
         }
 
         function setTagReaderProgress(percent) {
@@ -2053,36 +2376,39 @@
                 return;
             }
             if (RESERVED_TAGS.has(tagId)) {
-                tagReaderProgressBar.style.width = '0%';
-                tagReaderProgressText.textContent = 'Tag reservado. Probá con otro.';
-                tagReaderStatus.textContent = '⚠ Los tags 1, 2, 3 y 4 están reservados para control.';
+                showTagReaderError(
+                    'Tag reservado para control. Probá con otro.',
+                );
                 stableStart = null;
                 return;
             }
-            tagReaderLocked = true;
-            try {
-                const existing = tagCatalog.find((tag) => tag.physicalId === tagId);
-                if (!existing) {
-                    tagCatalog.push({
-                        physicalId: tagId,
-                        alias: pendingTagAlias || '',
-                        interchangeableWith: []
-                    });
-                } else if (pendingTagAlias) {
-                    existing.alias = pendingTagAlias;
-                }
-                pendingTagAlias = '';
-                if (tagAliasInput) {
-                    tagAliasInput.value = '';
-                }
-                renderAll();
-                setTagReaderProgress(100);
-                tagReaderStatus.textContent = '✅ Tag agregado al catálogo';
-            } finally {
-                setTimeout(() => {
-                    closeTagReader();
-                }, 150);
+            const existing = tagCatalog.find((tag) => tag.physicalId === tagId);
+            if (existing) {
+                showTagReaderError(
+                    'Tag ya agregado. Probá con otro.',
+                    `⚠ El tag ${tagId} ya está en el catálogo de lectura.`
+                );
+                return;
             }
+
+            tagReaderLocked = true;
+            tagCatalog.push({
+                physicalId: tagId,
+                alias: pendingTagAlias || '',
+                color: getNextTagColor(),
+                interchangeableWith: []
+            });
+            pendingTagAlias = '';
+            if (tagAliasInput) {
+                tagAliasInput.value = '';
+            }
+            renderAll();
+            setTagReaderProgress(100);
+            tagReaderStatus.textContent = '✅ Tag agregado al catálogo';
+
+            setTimeout(() => {
+                closeTagReader();
+            }, 150);
         }
 
         function handleTagReaderMessage(event) {
@@ -2109,12 +2435,21 @@
 
             // Verificar si es un tag reservado
             if (RESERVED_TAGS.has(tagId)) {
-                setTagReaderProgress(0);
-                tagReaderProgressText.textContent = 'Tag reservado. Probá con otro.';
-                tagReaderStatus.textContent = '⚠ Los tags 1, 2, 3 y 4 están reservados para control.';
-                tagReaderStatus.classList.add('error');
+                showTagReaderError(
+                    'Tag reservado para control. Probá con otro.',
+                );
                 stableTagId = tagId;  // Marcar como visto para no reintentar
                 stableStart = null;    // Asegurar que no hay progreso
+                return;
+            }
+
+            if (tagCatalog.some((tag) => tag.physicalId === tagId)) {
+                showTagReaderError(
+                    'Tag ya agregado. Probá con otro.',
+                    `⚠ El tag ${tagId} ya está en el catálogo de lectura.`
+                );
+                stableTagId = tagId;
+                stableStart = null;
                 return;
             }
 
@@ -2159,6 +2494,17 @@
             sequences.push([]);
             renderAll();
         });
+        menuToggleBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            toggleMainMenu();
+        });
+        activityLibrarySelect.addEventListener('change', () => {
+            const hasSelection = Boolean(activityLibrarySelect.value);
+            applyActivityBtn.disabled = !hasSelection;
+        });
+        applyActivityBtn.addEventListener('click', () => {
+            applyActivity(activityLibrarySelect.value);
+        });
 
         if (!navigator.bluetooth) {
             alert('Web Bluetooth no soportado. Usá Chrome o Edge en desktop.');
@@ -2170,6 +2516,8 @@
         stopMonitorBtn.disabled = true;
         applyDebugMode();
         renderAll();
+        renderActivityLibraryDropdown();
+        loadActivityLibrary();
         // loadLastSequence(); // disabled: do not auto-load persisted state
 
         showSequencesBtn.addEventListener('click', openSequenceModal);

@@ -92,6 +92,7 @@
     .stat-label { font-size: 8px; }
     .stat-value { font-size: 14px; }
     .ctrl-btn { padding: 4px 12px; font-size: 10px; }
+    .quick-nav { min-width: min(180px, calc(100vw - 40px)); }
   }
 
   .logo {
@@ -166,6 +167,59 @@
   .ctrl-btn:active::before { opacity: 0.2; }
   .ctrl-btn.paused { border-color: var(--accent2); background: var(--accent2); color: #fff; }
   .ctrl-btn.paused::before { background: #fff; }
+
+  .quick-nav-wrap {
+    position: relative;
+    margin-left: 0;
+    margin-right: 0;
+    flex-shrink: 0;
+  }
+
+  .quick-nav-btn {
+    font-family: var(--mono);
+    font-size: 18px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text);
+    width: 38px;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .quick-nav {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(2, 6, 23, 0.16);
+    min-width: 180px;
+    padding: 6px;
+    display: grid;
+    gap: 4px;
+    z-index: 50;
+  }
+
+  .quick-nav[hidden] { display: none !important; }
+
+  .quick-link {
+    display: block;
+    text-decoration: none;
+    color: var(--text);
+    border-radius: 7px;
+    padding: 8px 10px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .quick-link:hover { background: #edf2f7; }
+  .quick-link.active { background: #ebf8ff; color: #2b6cb0; }
+
+  body.embedded .quick-nav-wrap {
+    display: none;
+  }
 
   /* ─── VIDEO AREA ─── */
   #video-area {
@@ -398,6 +452,13 @@
 
   <!-- TOP BAR -->
   <div id="topbar">
+    <div class="quick-nav-wrap" id="quickNavWrap">
+      <button class="quick-nav-btn" id="quickNavBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="quickNavMenu">☰</button>
+      <nav class="quick-nav" id="quickNavMenu" hidden>
+        <a class="quick-link" href="/">Inicio</a>
+        <a class="quick-link active" href="/scanner">Scanner de tags</a>
+      </nav>
+    </div>
     <div class="logo">Robotito<span>Tag</span> · Detector</div>
     <div class="divider"></div>
     <div id="topbar-spacer"></div>
@@ -453,6 +514,8 @@
   const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === '1';
   if (!isEmbedded) {
     document.body.classList.add('standalone');
+  } else {
+    document.body.classList.add('embedded');
   }
 
   // ── DOM refs ──
@@ -462,6 +525,9 @@
   const bigCount     = document.getElementById('big-count');
   const noTagsMsg    = document.getElementById('no-tags-msg');
   const pauseBtn     = document.getElementById('pause-btn');
+  const quickNavWrap = document.getElementById('quickNavWrap');
+  const quickNavBtn  = document.getElementById('quickNavBtn');
+  const quickNavMenu = document.getElementById('quickNavMenu');
   const loadingOv    = document.getElementById('loading-overlay');
   const loadingSub   = document.getElementById('loading-sub');
   const errorOv      = document.getElementById('error-overlay');
@@ -473,6 +539,19 @@
 
   let loadStep = 0;
   const totalSteps = 3; // Browser check, WASM load, Camera init
+
+  function closeQuickNav() {
+    if (!quickNavMenu || !quickNavBtn) return;
+    quickNavMenu.hidden = true;
+    quickNavBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleQuickNav() {
+    if (!quickNavMenu || !quickNavBtn) return;
+    const shouldOpen = quickNavMenu.hidden;
+    quickNavMenu.hidden = !shouldOpen;
+    quickNavBtn.setAttribute('aria-expanded', String(shouldOpen));
+  }
 
   // ── State ──
   let detector       = null;
@@ -487,10 +566,16 @@
   // Map detected IDs to display IDs
   // Example: If tag 3 is detected, display it as 5
   const ID_MAPPING = {
+    5:1,
+    24:2,
+    0:3,
+    1:4,
+    99:5,
+    98:6,
     4:7,
     2:8,
-    3:9,
-    5:1
+    3:9
+
     // 3: 5,     // Detected ID 3 → Display as 5
     // 10: 20,   // Detected ID 10 → Display as 20
     // Add your mappings here
@@ -835,6 +920,28 @@
       pauseBtn.textContent = '⏸ Pause';
       pauseBtn.classList.remove('paused');
       setStatus('Running', true);
+    }
+  });
+
+  if (quickNavBtn) {
+    quickNavBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      toggleQuickNav();
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!quickNavMenu || quickNavMenu.hidden) return;
+    const target = event.target;
+    if (quickNavWrap && target instanceof Element && quickNavWrap.contains(target)) {
+      return;
+    }
+    closeQuickNav();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeQuickNav();
     }
   });
 
